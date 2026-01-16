@@ -4,7 +4,7 @@ import FileUpload from "./components/FileUpload";
 import FormatSelector from "./components/FormatSelector";
 import Header from "./components/Header";
 import ResultArea from "./components/ResultArea";
-import { converters, getPossibleOutputs } from "./converters";
+import { converters, getPossibleOutputs, normalizeFormat } from "./converters";
 // Removed ConvertButton import as it is now integrated into the flow
 
 type AppState = "IDLE" | "CONFIG" | "CONVERTING" | "SUCCESS";
@@ -16,13 +16,16 @@ function App() {
   const [progress, setProgress] = useState(0);
 
   // Derived input format
-  const inputFormat =
+  const rawInputFormat =
     selectedFiles.length > 0
-      ? selectedFiles[0].name.split(".").pop()?.toUpperCase()
+      ? selectedFiles[0].name.split(".").pop()?.toUpperCase() || ""
       : undefined;
+
+  const inputFormat = rawInputFormat ? normalizeFormat(rawInputFormat) : undefined;
 
   // Possible output formats based on input
   const formats = inputFormat ? getPossibleOutputs(inputFormat) : [];
+
 
   const handleFileChange = (files: File[]) => {
     setSelectedFiles(files);
