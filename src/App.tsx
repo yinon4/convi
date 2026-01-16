@@ -40,7 +40,7 @@ function App() {
       setProgress(25);
       const file = selectedFiles[0];
       const converter = inputFormat && converters[inputFormat]?.[outputFormat];
-      if (!converter) throw new Error('Conversion not supported');
+      if (!converter) throw new Error("Conversion not supported");
 
       setProgress(50);
       const blob = await converter(file);
@@ -48,7 +48,7 @@ function App() {
       setProgress(75);
       // Download the blob
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `converted.${outputFormat.toLowerCase()}`;
       a.click();
@@ -57,7 +57,7 @@ function App() {
       setProgress(100);
       setAppState("SUCCESS");
     } catch (error) {
-      console.error('Conversion failed:', error);
+      console.error("Conversion failed:", error);
       setAppState("IDLE");
       setProgress(0);
     }

@@ -1,6 +1,5 @@
-import { SparklesIcon, SunIcon, MoonIcon } from "@heroicons/react/24/outline";
+import { MoonIcon, SparklesIcon, SunIcon } from "@heroicons/react/24/outline";
 import React, { useEffect, useState } from "react";
-import ThemeSelector from "./ThemeSelector";
 
 interface HeaderProps {
   title?: string;
@@ -10,8 +9,8 @@ const Header: React.FC<HeaderProps> = ({ title = "Convi" }) => {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    const theme = isDark ? 'dark' : 'light orange';
-    document.documentElement.setAttribute('data-theme', theme);
+    const theme = isDark ? "dark-orange" : "light-orange";
+    document.documentElement.setAttribute("data-theme", theme);
   }, [isDark]);
 
   return (
@@ -26,13 +25,16 @@ const Header: React.FC<HeaderProps> = ({ title = "Convi" }) => {
           </h1>
         </div>
       </div>
-      <div className="navbar-end flex items-center gap-2">
-        <label className="swap swap-rotate">
-          <input type="checkbox" checked={isDark} onChange={(e) => setIsDark(e.target.checked)} />
-          <SunIcon className="swap-on w-6 h-6" />
-          <MoonIcon className="swap-off w-6 h-6" />
+      <div className="flex items-center gap-2 navbar-end">
+        <label className="swap swap-rotate btn btn-ghost btn-circle">
+          <input
+            type="checkbox"
+            checked={isDark}
+            onChange={(e) => setIsDark(e.target.checked)}
+          />
+          <SunIcon className="w-6 h-6 swap-on" />
+          <MoonIcon className="w-6 h-6 swap-off" />
         </label>
-        <ThemeSelector />
       </div>
     </div>
   );
