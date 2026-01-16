@@ -2,7 +2,7 @@ import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
 import React, { useRef, useState } from "react";
 
 interface FileUploadProps {
-  onFileChange: (file: File) => void;
+  onFileChange: (files: File[]) => void;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
@@ -24,7 +24,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      onFileChange(files[0]);
+      onFileChange(Array.from(files));
     }
   };
 
@@ -34,7 +34,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onFileChange(e.target.files[0]);
+      onFileChange(Array.from(e.target.files));
     }
   };
 
@@ -57,6 +57,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
         ref={fileInputRef}
         className="hidden"
         onChange={handleFileSelect}
+        multiple
       />
 
       <div className="flex flex-col items-center gap-4 p-8 text-center group-hover:scale-110 transition-transform duration-300 pointer-events-none">

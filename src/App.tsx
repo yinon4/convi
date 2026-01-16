@@ -10,13 +10,13 @@ type AppState = "IDLE" | "CONFIG" | "CONVERTING" | "SUCCESS";
 
 function App() {
   const [appState, setAppState] = useState<AppState>("IDLE");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [outputFormat, setOutputFormat] = useState<string>("");
   const [progress, setProgress] = useState(0);
 
   // Derived input format
-  const inputFormat = selectedFile
-    ? selectedFile.name.split(".").pop()?.toUpperCase()
+  const inputFormat = selectedFiles.length > 0
+    ? selectedFiles[0].name.split(".").pop()?.toUpperCase()
     : "";
 
   // Mock formats list
@@ -24,14 +24,14 @@ function App() {
     (f) => f !== inputFormat,
   );
 
-  const handleFileChange = (file: File) => {
-    setSelectedFile(file);
+  const handleFileChange = (files: File[]) => {
+    setSelectedFiles(files);
     setAppState("CONFIG");
     setOutputFormat(""); // Reset output format on new file
   };
 
   const handleConvert = () => {
-    if (!selectedFile || !outputFormat) return;
+    if (selectedFiles.length === 0 || !outputFormat) return;
 
     setAppState("CONVERTING");
     setProgress(0);
@@ -51,7 +51,7 @@ function App() {
 
   const handleReset = () => {
     setAppState("IDLE");
-    setSelectedFile(null);
+    setSelectedFiles([]);
     setOutputFormat("");
     setProgress(0);
   };
@@ -78,16 +78,25 @@ function App() {
           )}
 
           {/* CONFIG STATE */}
-          {appState === "CONFIG" && selectedFile && (
+          {appState === "CONFIG" && selectedFiles.length > 0 && (
             <div className="slide-in-from-bottom-8 space-y-8 animate-in duration-500 fade-in">
               <div className="flex items-center gap-4 bg-base-100 shadow-sm p-4 border border-base-300 rounded-2xl">
                 <div className="flex justify-center items-center bg-primary/10 rounded-xl w-12 h-12 font-bold text-primary">
                   {inputFormat}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold truncate">{selectedFile.name}</h3>
+                  <h3 className="font-bold truncate">
+                    {selectedFiles.length === 1
+                      ? selectedFiles[0].name
+                      : `${selectedFiles.length} files selected`}
+                  </h3>
                   <p className="text-xs text-base-content/60">
-                    {(selectedFile.size / 1024).toFixed(1)} KB
+                    {selectedFiles.length === 1
+                      ? (selectedFiles[0].size / 1024).toFixed(1) + " KB"
+                      : (
+                          selectedFiles.reduce((acc, f) => acc + f.size, 0) /
+                          1024
+                        ).toFixed(1) + " KB total"}
                   </p>
                 </div>
                 <button
@@ -141,10 +150,13 @@ function App() {
               </div>
               <div>
                 <h3 className="mb-2 font-bold text-2xl">
-                  Converting your file...
+                  Converting your {selectedFiles.length > 1 ? "files" : "file"}...
                 </h3>
                 <p className="text-base-content/60">
-                  Please wait while we process {selectedFile?.name}
+                  Please wait while we process{" "}
+                  {selectedFiles.length === 1
+                    ? selectedFiles[0].name
+                    : `${selectedFiles.length} files`}
                 </p>
               </div>
             </div>
@@ -152,7 +164,11 @@ function App() {
 
           {/* SUCCESS STATE */}
           {appState === "SUCCESS" && (
-            <ResultArea result={outputFormat} onReset={handleReset} />
+            <ResultArea
+              result={outputFormat}
+              count={selectedFiles.length}
+              onReset={handleReset}
+            />
           )}
         </div>
       </main>
