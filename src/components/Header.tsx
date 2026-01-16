@@ -24,13 +24,13 @@ const Header: React.FC<HeaderProps> = ({ title = "Convi" }) => {
     <>
       <header className="top-0 z-50 sticky bg-base-100 shadow-sm backdrop-blur-md px-4 md:px-8 border-base-200 border-b navbar">
         <div className="navbar-start">
-          <div className="flex items-center cursor-pointer group gap-2">
-            <div className="flex justify-center items-center bg-primary group-hover:rotate-180 rounded-xl w-10 h-10 text-primary-content transition-all duration-700 ease-in-out">
+          <div className="group flex items-center gap-2 cursor-pointer">
+            <div className="flex justify-center items-center bg-primary rounded-xl w-10 h-10 text-primary-content group-hover:rotate-180 transition-all duration-700 ease-in-out">
               <ArrowsRightLeftIcon className="w-6 h-6" />
             </div>
             <h1 className="font-black text-2xl tracking-tighter">
               {title.toLowerCase()}
-              <span className="group-hover:animate-bounce inline-block text-primary">
+              <span className="inline-block text-primary group-hover:animate-bounce">
                 .
               </span>
             </h1>

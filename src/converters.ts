@@ -75,7 +75,9 @@ const csvToJson = async (file: File): Promise<Blob> => {
   const lines = text.split("\n").filter((l) => l.trim());
   if (lines.length === 0) return new Blob(["[]"], { type: "application/json" });
 
-  const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+  const headers = lines[0]
+    .split(",")
+    .map((h) => h.trim().replace(/^"|"$/g, ""));
   const data = lines.slice(1).map((line) => {
     const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
     return headers.reduce((obj, header, i) => {
@@ -104,9 +106,12 @@ const jsonToXml = async (file: File): Promise<Blob> => {
       xml += `</${root}>`;
       return xml;
     };
-    return new Blob(['<?xml version="1.0" encoding="UTF-8"?>\n' + toXml(json)], {
-      type: "application/xml",
-    });
+    return new Blob(
+      ['<?xml version="1.0" encoding="UTF-8"?>\n' + toXml(json)],
+      {
+        type: "application/xml",
+      },
+    );
   } catch (e) {
     throw new Error("Invalid JSON");
   }
@@ -134,7 +139,8 @@ const xmlToJson = async (file: File): Promise<Blob> => {
         obj["@attributes"] = {};
         for (let i = 0; i < (node as Element).attributes.length; i++) {
           const attribute = (node as Element).attributes.item(i);
-          if (attribute) obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
+          if (attribute)
+            obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
         }
       }
     } else if (node.nodeType === 3) {
@@ -335,4 +341,3 @@ export const normalizeFormat = (format: string): string => {
   if (f === "HTM") return "HTML";
   return f;
 };
-

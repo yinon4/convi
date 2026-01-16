@@ -31,11 +31,11 @@ const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose }) => {
 
   const modalContent = (
     <div
-      className="z-[9999] fixed inset-0 flex justify-center items-center bg-black/60 backdrop-blur-sm p-4 cursor-pointer animate-in fade-in duration-200"
+      className="z-[9999] fixed inset-0 flex justify-center items-center bg-black/60 backdrop-blur-sm p-4 animate-in duration-200 cursor-pointer fade-in"
       onClick={onClose}
     >
       <div
-        className="relative bg-base-100 shadow-2xl p-6 md:p-8 rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto cursor-default animate-in zoom-in-95 duration-200"
+        className="relative bg-base-100 shadow-2xl p-6 md:p-8 rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto animate-in duration-200 cursor-default zoom-in-95"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -60,14 +60,14 @@ const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose }) => {
               className="bg-base-200/50 p-5 border border-base-300 rounded-2xl"
             >
               <h3 className="mb-1 font-bold text-lg">{cat.name}</h3>
-              <p className="mb-4 text-base-content/50 text-xs">
+              <p className="mb-4 text-xs text-base-content/50">
                 {cat.description}
               </p>
               <div className="flex flex-wrap gap-2">
                 {cat.formats.map((f) => (
                   <div
                     key={f}
-                    className="badge badge-primary badge-lg font-bold"
+                    className="font-bold badge badge-primary badge-lg"
                   >
                     {f}
                   </div>
@@ -77,10 +77,10 @@ const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose }) => {
           ))}
         </div>
 
-        <div className="mt-8 pt-6 border-t border-base-200 text-center">
+        <div className="mt-8 pt-6 border-base-200 border-t text-center">
           <button
             onClick={onClose}
-            className="btn btn-primary btn-wide rounded-xl"
+            className="rounded-xl btn btn-primary btn-wide"
           >
             Got it!
           </button>
@@ -91,6 +91,5 @@ const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose }) => {
 
   return createPortal(modalContent, document.body);
 };
-
 
 export default NetworkModal;

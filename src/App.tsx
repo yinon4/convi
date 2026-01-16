@@ -21,11 +21,12 @@ function App() {
       ? selectedFiles[0].name.split(".").pop()?.toUpperCase() || ""
       : undefined;
 
-  const inputFormat = rawInputFormat ? normalizeFormat(rawInputFormat) : undefined;
+  const inputFormat = rawInputFormat
+    ? normalizeFormat(rawInputFormat)
+    : undefined;
 
   // Possible output formats based on input
   const formats = inputFormat ? getPossibleOutputs(inputFormat) : [];
-
 
   const handleFileChange = (files: File[]) => {
     setSelectedFiles(files);
