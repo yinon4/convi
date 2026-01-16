@@ -4,6 +4,7 @@ import FileUpload from "./components/FileUpload";
 import FormatSelector from "./components/FormatSelector";
 import Header from "./components/Header";
 import ResultArea from "./components/ResultArea";
+import { converters, getPossibleOutputs } from "./converters";
 // Removed ConvertButton import as it is now integrated into the flow
 
 type AppState = "IDLE" | "CONFIG" | "CONVERTING" | "SUCCESS";
@@ -15,14 +16,13 @@ function App() {
   const [progress, setProgress] = useState(0);
 
   // Derived input format
-  const inputFormat = selectedFiles.length > 0
-    ? selectedFiles[0].name.split(".").pop()?.toUpperCase()
-    : "";
+  const inputFormat =
+    selectedFiles.length > 0
+      ? selectedFiles[0].name.split(".").pop()?.toUpperCase()
+      : undefined;
 
-  // Mock formats list
-  const formats = ["PDF", "DOCX", "TXT", "JPG", "PNG", "WEBP"].filter(
-    (f) => f !== inputFormat,
-  );
+  // Possible output formats based on input
+  const formats = inputFormat ? getPossibleOutputs(inputFormat) : [];
 
   const handleFileChange = (files: File[]) => {
     setSelectedFiles(files);
@@ -30,23 +30,37 @@ function App() {
     setOutputFormat(""); // Reset output format on new file
   };
 
-  const handleConvert = () => {
+  const handleConvert = async () => {
     if (selectedFiles.length === 0 || !outputFormat) return;
 
     setAppState("CONVERTING");
     setProgress(0);
 
-    // Mock conversion progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setAppState("SUCCESS");
-          return 100;
-        }
-        return prev + 5; // increment progress
-      });
-    }, 100);
+    try {
+      setProgress(25);
+      const file = selectedFiles[0];
+      const converter = inputFormat && converters[inputFormat]?.[outputFormat];
+      if (!converter) throw new Error('Conversion not supported');
+
+      setProgress(50);
+      const blob = await converter(file);
+
+      setProgress(75);
+      // Download the blob
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `converted.${outputFormat.toLowerCase()}`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      setProgress(100);
+      setAppState("SUCCESS");
+    } catch (error) {
+      console.error('Conversion failed:', error);
+      setAppState("IDLE");
+      setProgress(0);
+    }
   };
 
   const handleReset = () => {
@@ -150,7 +164,8 @@ function App() {
               </div>
               <div>
                 <h3 className="mb-2 font-bold text-2xl">
-                  Converting your {selectedFiles.length > 1 ? "files" : "file"}...
+                  Converting your {selectedFiles.length > 1 ? "files" : "file"}
+                  ...
                 </h3>
                 <p className="text-base-content/60">
                   Please wait while we process{" "}

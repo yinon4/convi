@@ -11,7 +11,11 @@ interface ResultAreaProps {
   onReset: () => void;
 }
 
-const ResultArea: React.FC<ResultAreaProps> = ({ result, count = 1, onReset }) => {
+const ResultArea: React.FC<ResultAreaProps> = ({
+  result,
+  count = 1,
+  onReset,
+}) => {
   return (
     <div className="w-full animate-in duration-500 zoom-in-50">
       <div className="relative bg-success shadow-xl overflow-hidden text-success-content card">
@@ -28,7 +32,8 @@ const ResultArea: React.FC<ResultAreaProps> = ({ result, count = 1, onReset }) =
             Detailed Success!
           </h2>
           <p className="opacity-90 mb-8 max-w-md text-lg">
-            {count > 1 ? `Your ${count} files have` : "Your file has"} been successfully converted to{" "}
+            {count > 1 ? `Your ${count} files have` : "Your file has"} been
+            successfully converted to{" "}
             <span className="font-bold underline">{result}</span>.
           </p>
 

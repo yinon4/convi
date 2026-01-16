@@ -34,6 +34,7 @@ const themes = [
   "dim",
   "nord",
   "sunset",
+  "light-orange",
 ];
 
 const ThemeSelector: React.FC = () => {
@@ -63,6 +64,7 @@ const ThemeSelector: React.FC = () => {
               className="btn-block justify-start content-center px-4 text-left capitalize theme-controller btn btn-sm btn-ghost"
               aria-label={theme}
               value={theme}
+              defaultChecked={theme === "light orange"}
             />
           ))}
         </div>
