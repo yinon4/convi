@@ -20,7 +20,37 @@ Use this file to provide workspace-specific custom instructions to Copilot. For 
 - [x] Ensure Documentation is Complete
 <!-- README.md exists, copilot-instructions.md cleaned -->
 
-## Execution Guidelines
+## UI Development Plan
+
+- [x] Plan UI Components for File Converter App
+<!-- Plan: Create reusable components for file converter UI using DaisyUI: Header, FileUpload, FormatSelector, ConvertButton, ResultArea -->
+
+- [x] Create Components Directory
+<!-- Created src/components directory -->
+
+- [x] Create Header Component
+<!-- Created Header.tsx with navbar and title -->
+
+- [x] Create FileUpload Component
+<!-- Created FileUpload.tsx with DaisyUI file input -->
+
+- [x] Create FormatSelector Component
+<!-- Created FormatSelector.tsx with two selects -->
+
+- [x] Create ConvertButton Component
+<!-- Created ConvertButton.tsx with DaisyUI button -->
+
+- [x] Create ResultArea Component
+<!-- Created ResultArea.tsx with card for results -->
+
+- [x] Update App.tsx to Use Components
+<!-- Updated App.tsx to integrate all components -->
+
+- [x] Validate UI
+<!-- No errors found, UI components created -->
+
+- [x] Add Theme Selector
+<!-- Added ThemeSelector component and integrated into Header -->
 
 PROGRESS TRACKING:
 
