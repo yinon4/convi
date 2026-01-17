@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { Document, Packer, Paragraph } from "docx";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 import * as mammoth from "mammoth";
 import html2pdf from "html2pdf.js";
 import * as pdfjsLib from "pdfjs-dist";
@@ -35,14 +35,16 @@ const txtToDocx = async (file: File): Promise<Blob> => {
   const doc = new Document({
     sections: [
       {
-        children: [new Paragraph(text)],
+        children: text.split("\n").map(
+          (line) =>
+            new Paragraph({
+              children: [new TextRun({ text: line })],
+            }),
+        ),
       },
     ],
   });
-  const buffer = await Packer.toBuffer(doc);
-  return new Blob([new Uint8Array(buffer)], {
-    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  });
+  return await Packer.toBlob(doc);
 };
 
 const jsonToCsv = async (file: File): Promise<Blob> => {
@@ -229,7 +231,10 @@ const pdfToHtml = async (file: File): Promise<Blob> => {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
-    const text = textContent.items.map((item: any) => item.str).join(" ");
+    const text = textContent.items
+      .filter((item: any) => "str" in item)
+      .map((item: any) => item.str)
+      .join(" ");
     html += `<p>${text}</p>`;
   }
   html += "</body></html>";
@@ -243,7 +248,11 @@ const pdfToTxt = async (file: File): Promise<Blob> => {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
-    text += textContent.items.map((item: any) => item.str).join(" ") + "\n";
+    text +=
+      textContent.items
+        .filter((item: any) => "str" in item)
+        .map((item: any) => item.str)
+        .join(" ") + "\n";
   }
   return new Blob([text], { type: "text/plain" });
 };
@@ -254,14 +263,16 @@ const pdfToDocx = async (file: File): Promise<Blob> => {
   const doc = new Document({
     sections: [
       {
-        children: [new Paragraph(text)],
+        children: text.split("\n").map(
+          (line) =>
+            new Paragraph({
+              children: [new TextRun({ text: line })],
+            }),
+        ),
       },
     ],
   });
-  const buffer = await Packer.toBuffer(doc);
-  return new Blob([new Uint8Array(buffer)], {
-    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  });
+  return await Packer.toBlob(doc);
 };
 
 const txtToHtml = async (file: File): Promise<Blob> => {
@@ -276,14 +287,16 @@ const htmlToDocx = async (file: File): Promise<Blob> => {
   const doc = new Document({
     sections: [
       {
-        children: [new Paragraph(text)],
+        children: text.split("\n").map(
+          (line) =>
+            new Paragraph({
+              children: [new TextRun({ text: line })],
+            }),
+        ),
       },
     ],
   });
-  const buffer = await Packer.toBuffer(doc);
-  return new Blob([new Uint8Array(buffer)], {
-    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  });
+  return await Packer.toBlob(doc);
 };
 
 const convertImage = async (file: File, targetType: string): Promise<Blob> => {
