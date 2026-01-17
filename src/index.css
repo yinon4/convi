@@ -38,3 +38,9 @@
   --depth: 1;
   --noise: 1;
 }
+
+/* Custom text selection color */
+::selection {
+  background-color: oklch(65% 0.25 45);
+  color: oklch(98% 0.01 45);
+}

@@ -185,7 +185,7 @@ function App() {
           {appState === "IDLE" && (
             <div className="animate-in duration-500 fade-in zoom-in-95">
               <div className="space-y-6 mb-12 text-center">
-                <h2 className="bg-clip-text bg-linear-to-r from-primary to-secondary font-black text-transparent text-4xl md:text-5xl leading-tight">
+                <h2 className="bg-clip-text bg-linear-to-r from-primary to-secondary font-black text-transparent text-4xl md:text-5xl leading-normal">
                   Convert Anything.
                 </h2>
                 <p className="mx-auto max-w-2xl text-base-content/70 text-lg md:text-xl leading-relaxed">
