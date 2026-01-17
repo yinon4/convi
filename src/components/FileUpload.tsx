@@ -5,6 +5,32 @@ interface FileUploadProps {
   onFileChange: (file: File) => void;
 }
 
+const ACCEPTED_TYPES = [
+  "text/plain",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/json",
+  "text/csv",
+  "application/xml",
+  "text/xml",
+  "text/html",
+  "image/bmp",
+  "image/x-icon",
+  "image/gif",
+  "text/tab-separated-values",
+  "text/markdown",
+];
+
+const isFileSupported = (file: File): boolean => {
+  return (
+    ACCEPTED_TYPES.includes(file.type) ||
+    ACCEPTED_TYPES.some((type) =>
+      file.name.toLowerCase().endsWith(type.split("/")[1]),
+    )
+  );
+};
+
 const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,7 +50,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      onFileChange(files[0]);
+      const file = files[0];
+      if (isFileSupported(file)) {
+        onFileChange(file);
+      } else {
+        alert("Unsupported file type. Please upload a supported file format.");
+      }
     }
   };
 
@@ -34,7 +65,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      onFileChange(e.target.files[0]);
+      const file = e.target.files[0];
+      if (isFileSupported(file)) {
+        onFileChange(file);
+      } else {
+        alert("Unsupported file type. Please upload a supported file format.");
+      }
     }
   };
 
@@ -56,6 +92,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
         type="file"
         ref={fileInputRef}
         className="hidden"
+        accept={ACCEPTED_TYPES.join(",")}
         onChange={handleFileSelect}
       />
 
@@ -70,7 +107,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
             {isDragging ? "Drop it here!" : "Upload your file"}
           </h3>
           <p className="mx-auto max-w-xs text-base-content/60">
-            Drag and drop your file here, or click to browse files
+            Drag and drop your file here, or click to browse files. Supports
+            TXT, JSON, CSV, XML, HTML, MD, TSV, JPG, PNG, WEBP, BMP, ICO, GIF.
           </p>
         </div>
       </div>

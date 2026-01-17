@@ -4,9 +4,9 @@ A powerful, client-side file converter built with React, TypeScript, and Vite.
 
 ## Features
 
-- **Document Conversion**: PDF, DOCX, TXT, HTML
-- **Data Conversion**: JSON, CSV, XML
-- **Image Conversion**: JPG, PNG, WEBP, BMP, GIF, ICO
+- **Text Conversion**: TXT, HTML, MD
+- **Data Conversion**: JSON, CSV, XML, TSV
+- **Image Conversion**: JPG, PNG, WEBP, BMP, ICO, GIF
 - **Privacy Focused**: All conversions happen locally in your browser.
 
 ## Getting Started
@@ -40,9 +40,7 @@ npm test
 - **React 19**
 - **Vite**
 - **Tailwind CSS & DaisyUI**
-- **jsPDF** & **html2pdf.js** (PDF generation)
-- **mammoth** & **docx** (DOCX processing)
-- **pdfjs-dist** (PDF reading)
+- **browser-image-compression** (Image processing)
 - **Vitest** (Testing)
   import reactDom from 'eslint-plugin-react-dom'
 

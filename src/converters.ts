@@ -1,42 +1,4 @@
-import jsPDF from "jspdf";
-import { Document, Packer, Paragraph, TextRun } from "docx";
-import * as mammoth from "mammoth";
-import html2pdf from "html2pdf.js";
-import * as pdfjsLib from "pdfjs-dist";
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { fetchFile, toBlobURL } from "@ffmpeg/util";
-
-// Set PDF.js worker using CDN to ensure it works in all environments
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-// Initialize FFmpeg instance
-let ffmpeg: FFmpeg | null = null;
-
-const getFFmpeg = async (): Promise<FFmpeg> => {
-  if (ffmpeg) return ffmpeg;
-
-  ffmpeg = new FFmpeg();
-
-  try {
-    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(
-        `${baseURL}/ffmpeg-core.wasm`,
-        "application/wasm",
-      ),
-    });
-  } catch (error) {
-    console.error("Failed to load FFmpeg:", error);
-    throw new Error("FFmpeg initialization failed");
-  }
-
-  return ffmpeg;
-};
-
 export type FileType =
-  | "PDF"
-  | "DOCX"
   | "TXT"
   | "JPG"
   | "PNG"
@@ -47,47 +9,11 @@ export type FileType =
   | "HTML"
   | "BMP"
   | "ICO"
-  | "MP4"
-  | "AVI"
-  | "MOV"
-  | "MKV"
-  | "WEBM"
-  | "FLV"
-  | "WMV"
-  | "MP3"
-  | "WAV"
-  | "FLAC"
-  | "AAC"
-  | "OGG"
-  | "M4A"
-  | "WMA";
+  | "GIF"
+  | "TSV"
+  | "MD";
 
 // Conversion functions
-const txtToPdf = async (file: File): Promise<Blob> => {
-  const text = await file.text();
-  const doc = new jsPDF();
-  const lines = doc.splitTextToSize(text, 180);
-  doc.text(lines, 10, 10);
-  return doc.output("blob");
-};
-
-const txtToDocx = async (file: File): Promise<Blob> => {
-  const text = await file.text();
-  const doc = new Document({
-    sections: [
-      {
-        children: text.split("\n").map(
-          (line) =>
-            new Paragraph({
-              children: [new TextRun({ text: line })],
-            }),
-        ),
-      },
-    ],
-  });
-  return await Packer.toBlob(doc);
-};
-
 const jsonToCsv = async (file: File): Promise<Blob> => {
   const text = await file.text();
   try {
@@ -176,6 +102,35 @@ const jsonToTxt = async (file: File): Promise<Blob> => {
   }
 };
 
+const txtToJson = async (file: File): Promise<Blob> => {
+  const text = await file.text();
+  // Try to parse as JSON, if fails, wrap in a JSON object
+  try {
+    JSON.parse(text);
+    return new Blob([text], { type: "application/json" });
+  } catch {
+    return new Blob([JSON.stringify({ text })], { type: "application/json" });
+  }
+};
+
+const txtToCsv = async (file: File): Promise<Blob> => {
+  const text = await file.text();
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line);
+  if (lines.length === 0) return new Blob([text], { type: "text/csv" });
+  // Assume first line is header, or create simple CSV
+  const csv = lines.map((line) => `"${line.replace(/"/g, '""')}"`).join("\n");
+  return new Blob([csv], { type: "text/csv" });
+};
+
+const txtToXml = async (file: File): Promise<Blob> => {
+  const text = await file.text();
+  const xml = `<root><text><![CDATA[${text}]]></text></root>`;
+  return new Blob([xml], { type: "text/xml" });
+};
+
 const xmlToJson = async (file: File): Promise<Blob> => {
   const text = await file.text();
   const parser = new DOMParser();
@@ -246,18 +201,6 @@ const xmlToJson = async (file: File): Promise<Blob> => {
   });
 };
 
-const htmlToPdf = async (file: File): Promise<Blob> => {
-  const text = await file.text();
-  const element = document.createElement("div");
-  element.innerHTML = text;
-  const options = {
-    margin: 1,
-    filename: "output.pdf",
-    html2canvas: { scale: 2 },
-  };
-  return html2pdf().set(options).from(element).outputPdf("blob");
-};
-
 const htmlToTxt = async (file: File): Promise<Blob> => {
   const text = await file.text();
   const tempDiv = document.createElement("div");
@@ -266,115 +209,39 @@ const htmlToTxt = async (file: File): Promise<Blob> => {
   return new Blob([cleanText], { type: "text/plain" });
 };
 
-const docxToPdf = async (file: File): Promise<Blob> => {
-  const arrayBuffer = await file.arrayBuffer();
-  const result = await mammoth.convertToHtml({ arrayBuffer });
-  const html = result.value;
-  const element = document.createElement("div");
-  element.innerHTML = html;
-  const options = {
-    margin: 1,
-    filename: "output.pdf",
-    html2canvas: { scale: 2 },
-  };
-  return html2pdf().set(options).from(element).outputPdf("blob");
-};
-
-const docxToHtml = async (file: File): Promise<Blob> => {
-  const arrayBuffer = await file.arrayBuffer();
-  const result = await mammoth.convertToHtml({ arrayBuffer });
-  return new Blob([result.value], { type: "text/html" });
-};
-
-const docxToTxt = async (file: File): Promise<Blob> => {
-  const arrayBuffer = await file.arrayBuffer();
-  const result = await mammoth.convertToHtml({ arrayBuffer });
-  const html = result.value;
-  const tempDiv = document.createElement("div");
-  tempDiv.innerHTML = html;
-  const text = tempDiv.textContent || tempDiv.innerText || "";
-  return new Blob([text], { type: "text/plain" });
-};
-
-const pdfToHtml = async (file: File): Promise<Blob> => {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let html = "<html><body>";
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    const text = textContent.items
-      .filter(
-        (item: unknown) =>
-          typeof item === "object" && item !== null && "str" in item,
-      )
-      .map((item: unknown) => (item as { str: string }).str)
-      .join(" ");
-    html += `<p>${text}</p>`;
-  }
-  html += "</body></html>";
-  return new Blob([html], { type: "text/html" });
-};
-
-const pdfToTxt = async (file: File): Promise<Blob> => {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let text = "";
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
-    text +=
-      textContent.items
-        .filter(
-          (item: unknown) =>
-            typeof item === "object" && item !== null && "str" in item,
-        )
-        .map((item: unknown) => (item as { str: string }).str)
-        .join(" ") + "\n";
-  }
-  return new Blob([text], { type: "text/plain" });
-};
-
-const pdfToDocx = async (file: File): Promise<Blob> => {
-  const textBlob = await pdfToTxt(file);
-  const text = await textBlob.text();
-  const doc = new Document({
-    sections: [
-      {
-        children: text.split("\n").map(
-          (line) =>
-            new Paragraph({
-              children: [new TextRun({ text: line })],
-            }),
-        ),
-      },
-    ],
-  });
-  return await Packer.toBlob(doc);
-};
-
 const txtToHtml = async (file: File): Promise<Blob> => {
   const text = await file.text();
   const html = `<html><body><pre>${text}</pre></body></html>`;
   return new Blob([html], { type: "text/html" });
 };
 
-const htmlToDocx = async (file: File): Promise<Blob> => {
-  const textBlob = await htmlToTxt(file);
-  const text = await textBlob.text();
-  const doc = new Document({
-    sections: [
-      {
-        children: text.split("\n").map(
-          (line) =>
-            new Paragraph({
-              children: [new TextRun({ text: line })],
-            }),
-        ),
-      },
-    ],
-  });
-  return await Packer.toBlob(doc);
+const csvToTsv = async (file: File): Promise<Blob> => {
+  const text = await file.text();
+  const tsv = text.replace(/,/g, "\t");
+  return new Blob([tsv], { type: "text/tab-separated-values" });
+};
+
+const tsvToCsv = async (file: File): Promise<Blob> => {
+  const text = await file.text();
+  const csv = text.replace(/\t/g, ",");
+  return new Blob([csv], { type: "text/csv" });
+};
+
+const mdToHtml = async (file: File): Promise<Blob> => {
+  const text = await file.text();
+  // Basic markdown to HTML conversion
+  let html = text
+    .replace(/^### (.*$)/gim, "<h3>$1</h3>")
+    .replace(/^## (.*$)/gim, "<h2>$1</h2>")
+    .replace(/^# (.*$)/gim, "<h1>$1</h1>")
+    .replace(/\*\*(.*)\*\*/gim, "<strong>$1</strong>")
+    .replace(/\*(.*)\*/gim, "<em>$1</em>")
+    .replace(/`([^`]+)`/gim, "<code>$1</code>")
+    .replace(/\n\n/gim, "</p><p>")
+    .replace(/\n/gim, "<br>");
+
+  html = `<html><body><p>${html}</p></body></html>`;
+  return new Blob([html], { type: "text/html" });
 };
 
 const convertImage = async (file: File, targetType: string): Promise<Blob> => {
@@ -396,130 +263,44 @@ const convertImage = async (file: File, targetType: string): Promise<Blob> => {
   });
 };
 
-const convertVideo = async (
-  file: File,
-  outputFormat: string,
-): Promise<Blob> => {
-  const ffmpeg = await getFFmpeg();
-
-  const inputFileName = `input.${file.name.split(".").pop()}`;
-  const outputFileName = `output.${outputFormat.toLowerCase()}`;
-
-  try {
-    // Write input file to FFmpeg's virtual filesystem
-    await ffmpeg.writeFile(inputFileName, await fetchFile(file));
-
-    // Run FFmpeg command
-    await ffmpeg.exec([
-      "-i",
-      inputFileName,
-      "-c:v",
-      "libx264", // Use H.264 codec for MP4
-      "-preset",
-      "fast",
-      "-crf",
-      "22",
-      "-c:a",
-      "aac",
-      outputFileName,
-    ]);
-
-    // Read output file
-    const data = await ffmpeg.readFile(outputFileName);
-
-    // Clean up
-    await ffmpeg.deleteFile(inputFileName);
-    await ffmpeg.deleteFile(outputFileName);
-
-    return new Blob([data as BlobPart], {
-      type: `video/${outputFormat.toLowerCase()}`,
-    });
-  } catch (error) {
-    console.error("Video conversion failed:", error);
-    throw new Error(`Failed to convert video to ${outputFormat}`);
-  }
-};
-
-const convertAudio = async (
-  file: File,
-  outputFormat: string,
-): Promise<Blob> => {
-  const ffmpeg = await getFFmpeg();
-
-  const inputFileName = `input.${file.name.split(".").pop()}`;
-  const outputFileName = `output.${outputFormat.toLowerCase()}`;
-
-  try {
-    // Write input file to FFmpeg's virtual filesystem
-    await ffmpeg.writeFile(inputFileName, await fetchFile(file));
-
-    // Run FFmpeg command for audio conversion
-    await ffmpeg.exec([
-      "-i",
-      inputFileName,
-      "-c:a",
-      getAudioCodec(outputFormat),
-      "-b:a",
-      "192k", // Set bitrate to 192kbps
-      outputFileName,
-    ]);
-
-    // Read output file
-    const data = await ffmpeg.readFile(outputFileName);
-
-    // Clean up
-    await ffmpeg.deleteFile(inputFileName);
-    await ffmpeg.deleteFile(outputFileName);
-
-    return new Blob([data as BlobPart], {
-      type: `audio/${outputFormat.toLowerCase()}`,
-    });
-  } catch (error) {
-    console.error("Audio conversion failed:", error);
-    throw new Error(`Failed to convert audio to ${outputFormat}`);
-  }
-};
-
-const getAudioCodec = (format: string): string => {
-  const codecMap: Record<string, string> = {
-    mp3: "libmp3lame",
-    wav: "pcm_s16le",
-    flac: "flac",
-    aac: "aac",
-    ogg: "libvorbis",
-    m4a: "aac",
-    wma: "wmav2",
-  };
-  return codecMap[format.toLowerCase()] || "aac";
-};
-
 // Conversion map
 export const converters: Record<
   string,
   Record<string, (file: File) => Promise<Blob>>
 > = {
   TXT: {
-    PDF: txtToPdf,
-    DOCX: txtToDocx,
     HTML: txtToHtml,
-  },
-  DOCX: {
-    PDF: docxToPdf,
-    TXT: docxToTxt,
-    HTML: docxToHtml,
-  },
-  PDF: {
-    TXT: pdfToTxt,
-    DOCX: pdfToDocx,
-    HTML: pdfToHtml,
+    JSON: txtToJson,
+    CSV: txtToCsv,
+    XML: txtToXml,
+    MD: async (file) => {
+      const text = await file.text();
+      // Basic text to markdown (just wrap as code block)
+      const md = "```\n" + text + "\n```";
+      return new Blob([md], { type: "text/markdown" });
+    },
   },
   JSON: {
     CSV: jsonToCsv,
+    TSV: async (file) => {
+      const csvBlob = await jsonToCsv(file);
+      const csvFile = new File([csvBlob], "temp.csv", {
+        type: "text/csv",
+      });
+      return csvToTsv(csvFile);
+    },
     XML: jsonToXml,
     TXT: jsonToTxt,
+    MD: async (file) => {
+      const text = await file.text();
+      // Basic JSON to markdown - format as code block
+      const md = "```json\n" + text + "\n```";
+      return new Blob([md], { type: "text/markdown" });
+    },
   },
   CSV: {
     JSON: csvToJson,
+    TSV: csvToTsv,
     XML: async (file) => {
       const jsonBlob = await csvToJson(file);
       const jsonFile = new File([jsonBlob], "temp.json", {
@@ -533,6 +314,25 @@ export const converters: Record<
         type: "application/json",
       });
       return jsonToTxt(jsonFile);
+    },
+    MD: async (file) => {
+      const text = await file.text();
+      // Basic CSV to markdown - format as table
+      const lines = text.split("\n").filter((line) => line.trim());
+      if (lines.length === 0) return new Blob([""], { type: "text/markdown" });
+
+      const headers = lines[0].split(",");
+      const rows = lines.slice(1);
+
+      let md = "| " + headers.join(" | ") + " |\n";
+      md += "| " + headers.map(() => "---").join(" | ") + " |\n";
+
+      rows.forEach((row) => {
+        const cells = row.split(",");
+        md += "| " + cells.join(" | ") + " |\n";
+      });
+
+      return new Blob([md], { type: "text/markdown" });
     },
   },
   XML: {
@@ -552,46 +352,140 @@ export const converters: Record<
       });
       return jsonToCsv(csvFile);
     },
+    TSV: async (file) => {
+      const csvBlob = await (async (file) => {
+        const jsonBlob = await xmlToJson(file);
+        const jsonText = await jsonBlob.text();
+        const json = JSON.parse(jsonText);
+        // For XML, the root element contains the array
+        const rootKey = Object.keys(json)[0];
+        const array = Array.isArray(json[rootKey])
+          ? json[rootKey]
+          : [json[rootKey]];
+        const csvJson = JSON.stringify(array);
+        const csvFile = new File([csvJson], "temp.json", {
+          type: "application/json",
+        });
+        return jsonToCsv(csvFile);
+      })(file);
+      const csvFile = new File([csvBlob], "temp.csv", {
+        type: "text/csv",
+      });
+      return csvToTsv(csvFile);
+    },
+    TXT: async (file) => {
+      const jsonBlob = await xmlToJson(file);
+      const jsonFile = new File([jsonBlob], "temp.json", {
+        type: "application/json",
+      });
+      return jsonToTxt(jsonFile);
+    },
+    MD: async (file) => {
+      const text = await file.text();
+      // Basic XML to markdown - format as code block
+      const md = "```xml\n" + text + "\n```";
+      return new Blob([md], { type: "text/markdown" });
+    },
   },
   HTML: {
-    PDF: htmlToPdf,
     TXT: htmlToTxt,
-    DOCX: htmlToDocx,
+    MD: async (file) => {
+      const text = await file.text();
+      // Basic HTML to markdown conversion
+      const md = text
+        .replace(/<h1[^>]*>(.*?)<\/h1>/gi, "# $1\n\n")
+        .replace(/<h2[^>]*>(.*?)<\/h2>/gi, "## $1\n\n")
+        .replace(/<h3[^>]*>(.*?)<\/h3>/gi, "### $1\n\n")
+        .replace(/<strong[^>]*>(.*?)<\/strong>/gi, "**$1**")
+        .replace(/<b[^>]*>(.*?)<\/b>/gi, "**$1**")
+        .replace(/<em[^>]*>(.*?)<\/em>/gi, "*$1*")
+        .replace(/<i[^>]*>(.*?)<\/i>/gi, "*$1*")
+        .replace(/<code[^>]*>(.*?)<\/code>/gi, "`$1`")
+        .replace(/<p[^>]*>(.*?)<\/p>/gi, "$1\n\n")
+        .replace(/<br[^>]*\/?>/gi, "\n")
+        .replace(/<[^>]+>/g, "") // Remove remaining HTML tags
+        .trim();
+      return new Blob([md], { type: "text/markdown" });
+    },
+  },
+  TSV: {
+    CSV: tsvToCsv,
+    JSON: async (file) => {
+      const csvBlob = await tsvToCsv(file);
+      const csvFile = new File([csvBlob], "temp.csv", {
+        type: "text/csv",
+      });
+      return csvToJson(csvFile);
+    },
+    XML: async (file) => {
+      const csvBlob = await tsvToCsv(file);
+      const csvFile = new File([csvBlob], "temp.csv", {
+        type: "text/csv",
+      });
+      const jsonBlob = await csvToJson(csvFile);
+      const jsonFile = new File([jsonBlob], "temp.json", {
+        type: "application/json",
+      });
+      return jsonToXml(jsonFile);
+    },
+    TXT: async (file) => {
+      const text = await file.text();
+      return new Blob([text], { type: "text/plain" });
+    },
+    MD: async (file) => {
+      const text = await file.text();
+      // Basic TSV to markdown - format as table
+      const lines = text.split("\n").filter((line) => line.trim());
+      if (lines.length === 0) return new Blob([""], { type: "text/markdown" });
+
+      const headers = lines[0].split("\t");
+      const rows = lines.slice(1);
+
+      let md = "| " + headers.join(" | ") + " |\n";
+      md += "| " + headers.map(() => "---").join(" | ") + " |\n";
+
+      rows.forEach((row) => {
+        const cells = row.split("\t");
+        md += "| " + cells.join(" | ") + " |\n";
+      });
+
+      return new Blob([md], { type: "text/markdown" });
+    },
+  },
+  MD: {
+    HTML: mdToHtml,
+    TXT: async (file) => {
+      const text = await file.text();
+      return new Blob([text], { type: "text/plain" });
+    },
   },
   JPG: {
     PNG: (file) => convertImage(file, "image/png"),
     WEBP: (file) => convertImage(file, "image/webp"),
     BMP: (file) => convertImage(file, "image/bmp"),
-    GIF: (file) => convertImage(file, "image/gif"),
     ICO: (file) => convertImage(file, "image/x-icon"),
+    GIF: (file) => convertImage(file, "image/gif"),
   },
   PNG: {
     JPG: (file) => convertImage(file, "image/jpeg"),
     WEBP: (file) => convertImage(file, "image/webp"),
     BMP: (file) => convertImage(file, "image/bmp"),
-    GIF: (file) => convertImage(file, "image/gif"),
     ICO: (file) => convertImage(file, "image/x-icon"),
+    GIF: (file) => convertImage(file, "image/gif"),
   },
   WEBP: {
     JPG: (file) => convertImage(file, "image/jpeg"),
     PNG: (file) => convertImage(file, "image/png"),
     BMP: (file) => convertImage(file, "image/bmp"),
-    GIF: (file) => convertImage(file, "image/gif"),
     ICO: (file) => convertImage(file, "image/x-icon"),
+    GIF: (file) => convertImage(file, "image/gif"),
   },
   BMP: {
     JPG: (file) => convertImage(file, "image/jpeg"),
     PNG: (file) => convertImage(file, "image/png"),
     WEBP: (file) => convertImage(file, "image/webp"),
+    ICO: (file) => convertImage(file, "image/x-icon"),
     GIF: (file) => convertImage(file, "image/gif"),
-    ICO: (file) => convertImage(file, "image/x-icon"),
-  },
-  GIF: {
-    JPG: (file) => convertImage(file, "image/jpeg"),
-    PNG: (file) => convertImage(file, "image/png"),
-    WEBP: (file) => convertImage(file, "image/webp"),
-    BMP: (file) => convertImage(file, "image/bmp"),
-    ICO: (file) => convertImage(file, "image/x-icon"),
   },
   ICO: {
     JPG: (file) => convertImage(file, "image/jpeg"),
@@ -600,117 +494,12 @@ export const converters: Record<
     BMP: (file) => convertImage(file, "image/bmp"),
     GIF: (file) => convertImage(file, "image/gif"),
   },
-  MP4: {
-    AVI: (file) => convertVideo(file, "avi"),
-    MOV: (file) => convertVideo(file, "mov"),
-    MKV: (file) => convertVideo(file, "mkv"),
-    WEBM: (file) => convertVideo(file, "webm"),
-    FLV: (file) => convertVideo(file, "flv"),
-    WMV: (file) => convertVideo(file, "wmv"),
-  },
-  AVI: {
-    MP4: (file) => convertVideo(file, "mp4"),
-    MOV: (file) => convertVideo(file, "mov"),
-    MKV: (file) => convertVideo(file, "mkv"),
-    WEBM: (file) => convertVideo(file, "webm"),
-    FLV: (file) => convertVideo(file, "flv"),
-    WMV: (file) => convertVideo(file, "wmv"),
-  },
-  MOV: {
-    MP4: (file) => convertVideo(file, "mp4"),
-    AVI: (file) => convertVideo(file, "avi"),
-    MKV: (file) => convertVideo(file, "mkv"),
-    WEBM: (file) => convertVideo(file, "webm"),
-    FLV: (file) => convertVideo(file, "flv"),
-    WMV: (file) => convertVideo(file, "wmv"),
-  },
-  MKV: {
-    MP4: (file) => convertVideo(file, "mp4"),
-    AVI: (file) => convertVideo(file, "avi"),
-    MOV: (file) => convertVideo(file, "mov"),
-    WEBM: (file) => convertVideo(file, "webm"),
-    FLV: (file) => convertVideo(file, "flv"),
-    WMV: (file) => convertVideo(file, "wmv"),
-  },
-  WEBM: {
-    MP4: (file) => convertVideo(file, "mp4"),
-    AVI: (file) => convertVideo(file, "avi"),
-    MOV: (file) => convertVideo(file, "mov"),
-    MKV: (file) => convertVideo(file, "mkv"),
-    FLV: (file) => convertVideo(file, "flv"),
-    WMV: (file) => convertVideo(file, "wmv"),
-  },
-  FLV: {
-    MP4: (file) => convertVideo(file, "mp4"),
-    AVI: (file) => convertVideo(file, "avi"),
-    MOV: (file) => convertVideo(file, "mov"),
-    MKV: (file) => convertVideo(file, "mkv"),
-    WEBM: (file) => convertVideo(file, "webm"),
-    WMV: (file) => convertVideo(file, "wmv"),
-  },
-  WMV: {
-    MP4: (file) => convertVideo(file, "mp4"),
-    AVI: (file) => convertVideo(file, "avi"),
-    MOV: (file) => convertVideo(file, "mov"),
-    MKV: (file) => convertVideo(file, "mkv"),
-    WEBM: (file) => convertVideo(file, "webm"),
-    FLV: (file) => convertVideo(file, "flv"),
-  },
-  MP3: {
-    WAV: (file) => convertAudio(file, "wav"),
-    FLAC: (file) => convertAudio(file, "flac"),
-    AAC: (file) => convertAudio(file, "aac"),
-    OGG: (file) => convertAudio(file, "ogg"),
-    M4A: (file) => convertAudio(file, "m4a"),
-    WMA: (file) => convertAudio(file, "wma"),
-  },
-  WAV: {
-    MP3: (file) => convertAudio(file, "mp3"),
-    FLAC: (file) => convertAudio(file, "flac"),
-    AAC: (file) => convertAudio(file, "aac"),
-    OGG: (file) => convertAudio(file, "ogg"),
-    M4A: (file) => convertAudio(file, "m4a"),
-    WMA: (file) => convertAudio(file, "wma"),
-  },
-  FLAC: {
-    MP3: (file) => convertAudio(file, "mp3"),
-    WAV: (file) => convertAudio(file, "wav"),
-    AAC: (file) => convertAudio(file, "aac"),
-    OGG: (file) => convertAudio(file, "ogg"),
-    M4A: (file) => convertAudio(file, "m4a"),
-    WMA: (file) => convertAudio(file, "wma"),
-  },
-  AAC: {
-    MP3: (file) => convertAudio(file, "mp3"),
-    WAV: (file) => convertAudio(file, "wav"),
-    FLAC: (file) => convertAudio(file, "flac"),
-    OGG: (file) => convertAudio(file, "ogg"),
-    M4A: (file) => convertAudio(file, "m4a"),
-    WMA: (file) => convertAudio(file, "wma"),
-  },
-  OGG: {
-    MP3: (file) => convertAudio(file, "mp3"),
-    WAV: (file) => convertAudio(file, "wav"),
-    FLAC: (file) => convertAudio(file, "flac"),
-    AAC: (file) => convertAudio(file, "aac"),
-    M4A: (file) => convertAudio(file, "m4a"),
-    WMA: (file) => convertAudio(file, "wma"),
-  },
-  M4A: {
-    MP3: (file) => convertAudio(file, "mp3"),
-    WAV: (file) => convertAudio(file, "wav"),
-    FLAC: (file) => convertAudio(file, "flac"),
-    AAC: (file) => convertAudio(file, "aac"),
-    OGG: (file) => convertAudio(file, "ogg"),
-    WMA: (file) => convertAudio(file, "wma"),
-  },
-  WMA: {
-    MP3: (file) => convertAudio(file, "mp3"),
-    WAV: (file) => convertAudio(file, "wav"),
-    FLAC: (file) => convertAudio(file, "flac"),
-    AAC: (file) => convertAudio(file, "aac"),
-    OGG: (file) => convertAudio(file, "ogg"),
-    M4A: (file) => convertAudio(file, "m4a"),
+  GIF: {
+    JPG: (file) => convertImage(file, "image/jpeg"),
+    PNG: (file) => convertImage(file, "image/png"),
+    WEBP: (file) => convertImage(file, "image/webp"),
+    BMP: (file) => convertImage(file, "image/bmp"),
+    ICO: (file) => convertImage(file, "image/x-icon"),
   },
 };
 
