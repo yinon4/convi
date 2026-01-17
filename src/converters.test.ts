@@ -10,7 +10,7 @@ if (typeof window !== "undefined") {
 
 // Polyfill Blob.text() and Blob.arrayBuffer() if missing (JSDOM might miss them)
 if (typeof Blob !== "undefined" && !Blob.prototype.text) {
-  Blob.prototype.text = function() {
+  Blob.prototype.text = function () {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -21,7 +21,7 @@ if (typeof Blob !== "undefined" && !Blob.prototype.text) {
 }
 
 if (typeof Blob !== "undefined" && !Blob.prototype.arrayBuffer) {
-  Blob.prototype.arrayBuffer = function() {
+  Blob.prototype.arrayBuffer = function () {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as ArrayBuffer);
@@ -35,7 +35,9 @@ vi.mock("html2pdf.js", () => {
   const mockHtml2Pdf = vi.fn().mockReturnValue({
     set: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
-    outputPdf: vi.fn().mockResolvedValue(new Blob(["mock-pdf"], { type: "application/pdf" })),
+    outputPdf: vi
+      .fn()
+      .mockResolvedValue(new Blob(["mock-pdf"], { type: "application/pdf" })),
   });
   return { default: mockHtml2Pdf };
 });
@@ -61,14 +63,20 @@ vi.mock("docx", async (importOriginal) => {
   const actual = await importOriginal<typeof import("docx")>();
   return {
     ...actual,
-    Paragraph: vi.fn(function(options) {
+    Paragraph: vi.fn(function (options) {
       return new actual.Paragraph(options);
     }),
-    TextRun: vi.fn(function(options) {
+    TextRun: vi.fn(function (options) {
       return new actual.TextRun(options);
     }),
     Packer: {
-      toBlob: vi.fn().mockResolvedValue(new Blob(["mock-docx-content"], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" })),
+      toBlob: vi
+        .fn()
+        .mockResolvedValue(
+          new Blob(["mock-docx-content"], {
+            type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          }),
+        ),
     },
   };
 });
@@ -84,21 +92,29 @@ describe("Converters", () => {
 
   describe("TXT Conversions", () => {
     it("converts TXT to PDF", async () => {
-      const file = new File(["hello world"], "test.txt", { type: "text/plain" });
+      const file = new File(["hello world"], "test.txt", {
+        type: "text/plain",
+      });
       const result = await converters.TXT.PDF(file);
       expect(result).toBeInstanceOf(Blob);
       expect(result.type).toBe("application/pdf");
     });
 
     it("converts TXT to DOCX", async () => {
-      const file = new File(["hello world"], "test.txt", { type: "text/plain" });
+      const file = new File(["hello world"], "test.txt", {
+        type: "text/plain",
+      });
       const result = await converters.TXT.DOCX(file);
       expect(result).toBeInstanceOf(Blob);
-      expect(result.type).toBe("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      expect(result.type).toBe(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      );
     });
 
     it("converts TXT to HTML", async () => {
-      const file = new File(["hello world"], "test.txt", { type: "text/plain" });
+      const file = new File(["hello world"], "test.txt", {
+        type: "text/plain",
+      });
       const result = await converters.TXT.HTML(file);
       const text = await result.text();
       expect(text).toContain("hello world");
@@ -108,13 +124,16 @@ describe("Converters", () => {
 
   describe("JSON Conversions", () => {
     it("converts JSON to CSV", async () => {
-      const json = JSON.stringify([{ name: "John", age: 30 }, { name: "Jane", age: 25 }]);
+      const json = JSON.stringify([
+        { name: "John", age: 30 },
+        { name: "Jane", age: 25 },
+      ]);
       const file = new File([json], "test.json", { type: "application/json" });
       const result = await converters.JSON.CSV(file);
       const text = await result.text();
       expect(text).toContain("name,age");
-      expect(text).toContain("\"John\",30");
-      expect(text).toContain("\"Jane\",25");
+      expect(text).toContain('"John",30');
+      expect(text).toContain('"Jane",25');
     });
 
     it("converts JSON to XML", async () => {
@@ -162,8 +181,11 @@ describe("Converters", () => {
   });
 
   describe("XML Conversions", () => {
-    const xmlContent = '<?xml version="1.0" encoding="UTF-8"?><root><item><name>John</name></item></root>';
-    const xmlFile = new File([xmlContent], "test.xml", { type: "application/xml" });
+    const xmlContent =
+      '<?xml version="1.0" encoding="UTF-8"?><root><item><name>John</name></item></root>';
+    const xmlFile = new File([xmlContent], "test.xml", {
+      type: "application/xml",
+    });
 
     it("converts XML to JSON", async () => {
       const result = await converters.XML.JSON(xmlFile);
@@ -181,7 +203,9 @@ describe("Converters", () => {
 
   describe("HTML Conversions", () => {
     const htmlContent = "<html><body><h1>Hello World</h1></body></html>";
-    const htmlFile = new File([htmlContent], "test.html", { type: "text/html" });
+    const htmlFile = new File([htmlContent], "test.html", {
+      type: "text/html",
+    });
 
     it("converts HTML to TXT", async () => {
       const result = await converters.HTML.TXT(htmlFile);
@@ -196,12 +220,16 @@ describe("Converters", () => {
 
     it("converts HTML to DOCX", async () => {
       const result = await converters.HTML.DOCX(htmlFile);
-      expect(result.type).toBe("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      expect(result.type).toBe(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      );
     });
   });
 
   describe("PDF Conversions", () => {
-    const pdfFile = new File(["fake-pdf-content"], "test.pdf", { type: "application/pdf" });
+    const pdfFile = new File(["fake-pdf-content"], "test.pdf", {
+      type: "application/pdf",
+    });
 
     it("converts PDF to TXT", async () => {
       const result = await converters.PDF.TXT(pdfFile);
@@ -218,19 +246,21 @@ describe("Converters", () => {
 
     it("converts PDF to DOCX", async () => {
       const result = await converters.PDF.DOCX(pdfFile);
-      expect(result.type).toBe("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      expect(result.type).toBe(
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      );
       expect(result).toBeInstanceOf(Blob);
-      
+
       // Verify that docx components were called correctly
       // Paragraph should be called for each line (mock returns "mock pdf text\n")
       expect(Paragraph).toHaveBeenCalled();
       expect(TextRun).toHaveBeenCalled();
-      
+
       // Check that it was called with an object, not just a string (the reported bug)
       const firstParaCall = vi.mocked(Paragraph).mock.calls[0][0];
       expect(typeof firstParaCall).toBe("object");
       expect(firstParaCall).toHaveProperty("children");
-      
+
       const firstTextRunCall = vi.mocked(TextRun).mock.calls[0][0];
       expect(typeof firstTextRunCall).toBe("object");
       expect(firstTextRunCall).toHaveProperty("text", "mock pdf text");
@@ -239,10 +269,14 @@ describe("Converters", () => {
 
   describe("DOCX Conversions", () => {
     // DOCX to X uses mammoth, which we might need to mock if it fails in node
-    const docxFile = new File(["fake-docx-content"], "test.docx", { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+    const docxFile = new File(["fake-docx-content"], "test.docx", {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
 
     vi.mock("mammoth", () => ({
-      convertToHtml: vi.fn().mockResolvedValue({ value: "<p>mock docx text</p>" }),
+      convertToHtml: vi
+        .fn()
+        .mockResolvedValue({ value: "<p>mock docx text</p>" }),
     }));
 
     it("converts DOCX to HTML", async () => {
@@ -266,14 +300,14 @@ describe("Converters", () => {
   describe("Image Conversions", () => {
     it("has all expected conversion methods for JPG", () => {
       const formats = ["PNG", "WEBP", "BMP", "GIF", "ICO"];
-      formats.forEach(f => {
+      formats.forEach((f) => {
         expect(converters.JPG[f]).toBeDefined();
       });
     });
 
     it("has all expected conversion methods for PNG", () => {
       const formats = ["JPG", "WEBP", "BMP", "GIF", "ICO"];
-      formats.forEach(f => {
+      formats.forEach((f) => {
         expect(converters.PNG[f]).toBeDefined();
       });
     });
