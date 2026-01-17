@@ -222,6 +222,20 @@ const docxToTxt = async (file: File): Promise<Blob> => {
   return new Blob([text], { type: "text/plain" });
 };
 
+const pdfToHtml = async (file: File): Promise<Blob> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let html = "<html><body>";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const text = textContent.items.map((item: any) => item.str).join(" ");
+    html += `<p>${text}</p>`;
+  }
+  html += "</body></html>";
+  return new Blob([html], { type: "text/html" });
+};
+
 const pdfToTxt = async (file: File): Promise<Blob> => {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -232,6 +246,44 @@ const pdfToTxt = async (file: File): Promise<Blob> => {
     text += textContent.items.map((item: any) => item.str).join(" ") + "\n";
   }
   return new Blob([text], { type: "text/plain" });
+};
+
+const pdfToDocx = async (file: File): Promise<Blob> => {
+  const textBlob = await pdfToTxt(file);
+  const text = await textBlob.text();
+  const doc = new Document({
+    sections: [
+      {
+        children: [new Paragraph(text)],
+      },
+    ],
+  });
+  const buffer = await Packer.toBuffer(doc);
+  return new Blob([new Uint8Array(buffer)], {
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+};
+
+const txtToHtml = async (file: File): Promise<Blob> => {
+  const text = await file.text();
+  const html = `<html><body><pre>${text}</pre></body></html>`;
+  return new Blob([html], { type: "text/html" });
+};
+
+const htmlToDocx = async (file: File): Promise<Blob> => {
+  const textBlob = await htmlToTxt(file);
+  const text = await textBlob.text();
+  const doc = new Document({
+    sections: [
+      {
+        children: [new Paragraph(text)],
+      },
+    ],
+  });
+  const buffer = await Packer.toBuffer(doc);
+  return new Blob([new Uint8Array(buffer)], {
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
 };
 
 const convertImage = async (file: File, targetType: string): Promise<Blob> => {
@@ -261,6 +313,7 @@ export const converters: Record<
   TXT: {
     PDF: txtToPdf,
     DOCX: txtToDocx,
+    HTML: txtToHtml,
   },
   DOCX: {
     PDF: docxToPdf,
@@ -269,6 +322,8 @@ export const converters: Record<
   },
   PDF: {
     TXT: pdfToTxt,
+    DOCX: pdfToDocx,
+    HTML: pdfToHtml,
   },
   JSON: {
     CSV: jsonToCsv,
@@ -277,13 +332,29 @@ export const converters: Record<
   },
   CSV: {
     JSON: csvToJson,
+    XML: async (file) => {
+      const jsonBlob = await csvToJson(file);
+      const jsonFile = new File([jsonBlob], "temp.json", { type: "application/json" });
+      return jsonToXml(jsonFile);
+    },
+    TXT: async (file) => {
+      const jsonBlob = await csvToJson(file);
+      const jsonFile = new File([jsonBlob], "temp.json", { type: "application/json" });
+      return jsonToTxt(jsonFile);
+    }
   },
   XML: {
     JSON: xmlToJson,
+    CSV: async (file) => {
+      const jsonBlob = await xmlToJson(file);
+      const jsonFile = new File([jsonBlob], "temp.json", { type: "application/json" });
+      return jsonToCsv(jsonFile);
+    },
   },
   HTML: {
     PDF: htmlToPdf,
     TXT: htmlToTxt,
+    DOCX: htmlToDocx,
   },
   JPG: {
     PNG: (file) => convertImage(file, "image/png"),

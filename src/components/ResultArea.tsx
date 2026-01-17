@@ -7,13 +7,11 @@ import React from "react";
 
 interface ResultAreaProps {
   result?: string;
-  count?: number;
   onReset: () => void;
 }
 
 const ResultArea: React.FC<ResultAreaProps> = ({
   result,
-  count = 1,
   onReset,
 }) => {
   return (
@@ -29,10 +27,10 @@ const ResultArea: React.FC<ResultAreaProps> = ({
           </div>
 
           <h2 className="mb-2 font-bold text-3xl card-title">
-            Detailed Success!
+            Success!
           </h2>
           <p className="opacity-90 mb-8 max-w-md text-lg">
-            {count > 1 ? `Your ${count} files have` : "Your file has"} been
+            Your file has been
             successfully converted to{" "}
             <span className="font-bold underline">{result}</span>.
           </p>
@@ -40,7 +38,7 @@ const ResultArea: React.FC<ResultAreaProps> = ({
           <div className="flex sm:flex-row flex-col justify-center gap-3 w-full max-w-md">
             <button className="flex-1 gap-2 bg-white hover:bg-white/90 shadow-lg border-none text-success btn btn-active">
               <ArrowDownTrayIcon className="w-5 h-5" />
-              Download {count > 1 ? "All" : "File"}
+              Download File
             </button>
             <button
               onClick={onReset}

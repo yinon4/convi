@@ -11,15 +11,14 @@ type AppState = "IDLE" | "CONFIG" | "CONVERTING" | "SUCCESS";
 
 function App() {
   const [appState, setAppState] = useState<AppState>("IDLE");
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [outputFormat, setOutputFormat] = useState<string>("");
   const [progress, setProgress] = useState(0);
 
   // Derived input format
-  const rawInputFormat =
-    selectedFiles.length > 0
-      ? selectedFiles[0].name.split(".").pop()?.toUpperCase() || ""
-      : undefined;
+  const rawInputFormat = selectedFile
+    ? selectedFile.name.split(".").pop()?.toUpperCase() || ""
+    : undefined;
 
   const inputFormat = rawInputFormat
     ? normalizeFormat(rawInputFormat)
@@ -28,21 +27,21 @@ function App() {
   // Possible output formats based on input
   const formats = inputFormat ? getPossibleOutputs(inputFormat) : [];
 
-  const handleFileChange = (files: File[]) => {
-    setSelectedFiles(files);
+  const handleFileChange = (file: File) => {
+    setSelectedFile(file);
     setAppState("CONFIG");
     setOutputFormat(""); // Reset output format on new file
   };
 
   const handleConvert = async () => {
-    if (selectedFiles.length === 0 || !outputFormat) return;
+    if (!selectedFile || !outputFormat) return;
 
     setAppState("CONVERTING");
     setProgress(0);
 
     try {
       setProgress(25);
-      const file = selectedFiles[0];
+      const file = selectedFile;
       const converter = inputFormat && converters[inputFormat]?.[outputFormat];
       if (!converter) throw new Error("Conversion not supported");
 
@@ -69,7 +68,7 @@ function App() {
 
   const handleReset = () => {
     setAppState("IDLE");
-    setSelectedFiles([]);
+    setSelectedFile(null);
     setOutputFormat("");
     setProgress(0);
   };
@@ -84,7 +83,7 @@ function App() {
           {appState === "IDLE" && (
             <div className="animate-in duration-500 fade-in zoom-in-95">
               <div className="space-y-4 mb-10 text-center">
-                <h2 className="bg-clip-text bg-gradient-to-r from-primary to-secondary font-black text-transparent text-4xl md:text-5xl">
+                <h2 className="bg-clip-text bg-linear-to-r from-primary to-secondary font-black text-transparent text-4xl md:text-5xl">
                   Convert Anything.
                 </h2>
                 <p className="text-base-content/70 text-lg">
@@ -96,7 +95,7 @@ function App() {
           )}
 
           {/* CONFIG STATE */}
-          {appState === "CONFIG" && selectedFiles.length > 0 && (
+          {appState === "CONFIG" && selectedFile && (
             <div className="slide-in-from-bottom-8 space-y-8 animate-in duration-500 fade-in">
               <div className="flex items-center gap-4 bg-base-100 shadow-sm p-4 border border-base-300 rounded-2xl">
                 <div className="flex justify-center items-center bg-primary/10 rounded-xl w-12 h-12 font-bold text-primary">
@@ -104,17 +103,10 @@ function App() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold truncate">
-                    {selectedFiles.length === 1
-                      ? selectedFiles[0].name
-                      : `${selectedFiles.length} files selected`}
+                    {selectedFile.name}
                   </h3>
                   <p className="text-xs text-base-content/60">
-                    {selectedFiles.length === 1
-                      ? (selectedFiles[0].size / 1024).toFixed(1) + " KB"
-                      : (
-                          selectedFiles.reduce((acc, f) => acc + f.size, 0) /
-                          1024
-                        ).toFixed(1) + " KB total"}
+                    {(selectedFile.size / 1024).toFixed(1)} KB
                   </p>
                 </div>
                 <button
@@ -168,14 +160,10 @@ function App() {
               </div>
               <div>
                 <h3 className="mb-2 font-bold text-2xl">
-                  Converting your {selectedFiles.length > 1 ? "files" : "file"}
-                  ...
+                  Converting your file...
                 </h3>
                 <p className="text-base-content/60">
-                  Please wait while we process{" "}
-                  {selectedFiles.length === 1
-                    ? selectedFiles[0].name
-                    : `${selectedFiles.length} files`}
+                  Please wait while we process {selectedFile?.name}
                 </p>
               </div>
             </div>
@@ -185,7 +173,6 @@ function App() {
           {appState === "SUCCESS" && (
             <ResultArea
               result={outputFormat}
-              count={selectedFiles.length}
               onReset={handleReset}
             />
           )}
