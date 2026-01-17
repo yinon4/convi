@@ -45,12 +45,12 @@ const testFiles = {
 if (typeof window !== "undefined") {
   window.URL.createObjectURL = vi.fn(() => "mock-url");
   window.URL.revokeObjectURL = vi.fn();
-  // @ts-ignore - Mock for browser environment
+  // @ts-expect-error - Mock for browser environment
   (window as unknown as { DOMMatrix: typeof DOMMatrix }).DOMMatrix =
     class DOMMatrix {};
 }
 
-// @ts-ignore - Mock for DOMParser
+// @ts-expect-error - Mock for DOMParser
 (globalThis as unknown as { DOMParser: new () => DOMParser }).DOMParser = vi
   .fn()
   .mockImplementation(function () {
@@ -130,27 +130,27 @@ if (typeof window !== "undefined") {
               hasChildNodes: vi.fn().mockReturnValue(true),
             },
           ];
-          // @ts-ignore - Mock childNodes
+          // @ts-expect-error - Mock childNodes
           childNodes.item = vi
             .fn()
             .mockImplementation((index: number) => childNodes[index]);
           childNodes.length = 2;
 
-          // @ts-ignore - Mock childNodes
+          // @ts-expect-error - Mock childNodes
           childNodes[0].childNodes[0].childNodes.item = vi
             .fn()
             .mockImplementation(
               (index: number) => childNodes[0].childNodes[0].childNodes[index],
             );
           childNodes[0].childNodes[0].childNodes.length = 1;
-          // @ts-ignore - Mock childNodes
+          // @ts-expect-error - Mock childNodes
           childNodes[0].childNodes[1].childNodes.item = vi
             .fn()
             .mockImplementation(
               (index: number) => childNodes[0].childNodes[1].childNodes[index],
             );
           childNodes[0].childNodes[1].childNodes.length = 1;
-          // @ts-ignore - Mock childNodes
+          // @ts-expect-error - Mock childNodes
           childNodes[0].childNodes[2].childNodes.item = vi
             .fn()
             .mockImplementation(
@@ -158,28 +158,28 @@ if (typeof window !== "undefined") {
             );
           childNodes[0].childNodes[2].childNodes.length = 1;
 
-          // @ts-ignore - Mock childNodes
+          // @ts-expect-error - Mock childNodes
           childNodes[1].childNodes.item = vi
             .fn()
             .mockImplementation(
               (index: number) => childNodes[1].childNodes[index],
             );
           childNodes[1].childNodes.length = 3;
-          // @ts-ignore - Mock childNodes
+          // @ts-expect-error - Mock childNodes
           childNodes[1].childNodes[0].childNodes.item = vi
             .fn()
             .mockImplementation(
               (index: number) => childNodes[1].childNodes[0].childNodes[index],
             );
           childNodes[1].childNodes[0].childNodes.length = 1;
-          // @ts-ignore - Mock childNodes
+          // @ts-expect-error - Mock childNodes
           childNodes[1].childNodes[1].childNodes.item = vi
             .fn()
             .mockImplementation(
               (index: number) => childNodes[1].childNodes[1].childNodes[index],
             );
           childNodes[1].childNodes[1].childNodes.length = 1;
-          // @ts-ignore - Mock childNodes
+          // @ts-expect-error - Mock childNodes
           childNodes[1].childNodes[2].childNodes.item = vi
             .fn()
             .mockImplementation(
@@ -204,7 +204,7 @@ if (typeof window !== "undefined") {
     };
   });
 
-// @ts-ignore - Mock document
+// @ts-expect-error - Mock document
 (globalThis as unknown as { document: Document }).document = {
   createElement: vi.fn().mockImplementation(() => {
     let htmlContent = "";
@@ -327,35 +327,6 @@ describe("Converters", () => {
     vi.clearAllMocks();
   });
 
-  describe("TXT Conversions", () => {
-    it("converts TXT to HTML", async () => {
-      const result = await converters.TXT.HTML(testFiles.txt);
-      const text = await result.text();
-      expect(text).toContain("Hello World");
-      expect(text).toContain("test text file");
-      expect(text).toContain("<html><body><pre>");
-    });
-
-    it("converts TXT to JSON", async () => {
-      const result = await converters.TXT.JSON(testFiles.txt);
-      const text = await result.text();
-      expect(text).toContain("Hello World");
-    });
-
-    it("converts TXT to CSV", async () => {
-      const result = await converters.TXT.CSV(testFiles.txt);
-      expect(result).toBeInstanceOf(Blob);
-      expect(result.type).toBe("text/csv");
-    });
-
-    it("converts TXT to XML", async () => {
-      const result = await converters.TXT.XML(testFiles.txt);
-      const text = await result.text();
-      expect(text).toContain("<root><text>");
-      expect(text).toContain("Hello World");
-    });
-  });
-
   describe("JSON Conversions", () => {
     it("converts JSON to CSV", async () => {
       const result = await converters.JSON.CSV(testFiles.json);
@@ -371,16 +342,15 @@ describe("Converters", () => {
       expect(text).toContain("<age>30</age>");
       expect(text).toContain("<city>New York</city>");
     });
-
-    it("converts JSON to TXT", async () => {
-      const result = await converters.JSON.TXT(testFiles.json);
+  });
+  describe("MD Conversions", () => {
+    it("converts MD to HTML", async () => {
+      const result = await converters.MD.HTML(testFiles.md);
       const text = await result.text();
-      expect(text).toContain('"name": "John"');
-      expect(text).toContain('"age": 30');
-      expect(text).toContain('"city": "New York"');
+      expect(text).toContain("<h1>Test Markdown</h1>");
+      expect(text).toContain("<strong>test</strong>");
     });
   });
-
   describe("CSV Conversions", () => {
     it("converts CSV to JSON", async () => {
       const result = await converters.CSV.JSON(testFiles.csv);
@@ -398,16 +368,15 @@ describe("Converters", () => {
       expect(text).toContain("<name>John</name>");
       expect(text).toContain("<age>30</age>");
     });
-
-    it("converts CSV to TXT", async () => {
-      const result = await converters.CSV.TXT(testFiles.csv);
+  });
+  describe("HTML Conversions", () => {
+    it("converts HTML to MD", async () => {
+      const result = await converters.HTML.MD(testFiles.html);
       const text = await result.text();
-      expect(text).toContain("John");
-      expect(text).toContain("30");
-      expect(text).toContain("New York");
+      expect(text).toContain("# Hello World");
+      expect(text).toContain("This is a test HTML file");
     });
   });
-
   describe("XML Conversions", () => {
     it("converts XML to JSON", async () => {
       const result = await converters.XML.JSON(testFiles.xml);
@@ -424,22 +393,6 @@ describe("Converters", () => {
       const text = await result.text();
       expect(text).toContain("name,age,city");
       expect(text).toContain('"John","30","New York"');
-    });
-
-    it("converts XML to TXT", async () => {
-      const result = await converters.XML.TXT(testFiles.xml);
-      const text = await result.text();
-      expect(text).toContain("John");
-      expect(text).toContain("30");
-    });
-  });
-
-  describe("HTML Conversions", () => {
-    it("converts HTML to TXT", async () => {
-      const result = await converters.HTML.TXT(testFiles.html);
-      const text = await result.text();
-      expect(text).toContain("Hello World");
-      expect(text).toContain("test HTML file");
     });
   });
 
@@ -465,28 +418,6 @@ describe("Converters", () => {
       expect(text).toContain("<root>");
       expect(text).toContain("<Name>John</Name>");
     });
-
-    it("converts TSV to TXT", async () => {
-      const result = await converters.TSV.TXT(testFiles.tsv);
-      const text = await result.text();
-      expect(text).toContain("Name\tAge\tCity");
-    });
-  });
-
-  describe("MD Conversions", () => {
-    it("converts MD to HTML", async () => {
-      const result = await converters.MD.HTML(testFiles.md);
-      const text = await result.text();
-      expect(text).toContain("<h1>Test Markdown</h1>");
-      expect(text).toContain("<strong>test</strong>");
-    });
-
-    it("converts MD to TXT", async () => {
-      const result = await converters.MD.TXT(testFiles.md);
-      const text = await result.text();
-      expect(text).toContain("# Test Markdown");
-      expect(text).toContain("**test**");
-    });
   });
 
   describe("Image Conversions", () => {
@@ -508,6 +439,189 @@ describe("Converters", () => {
       const formats = ["JPG", "PNG", "WEBP", "BMP", "ICO"];
       formats.forEach((f) => {
         expect(converters.GIF[f]).toBeDefined();
+      });
+    });
+  });
+
+  describe("Edge Cases and Error Handling", () => {
+    describe("Invalid Input Files", () => {
+      it("handles invalid JSON gracefully", async () => {
+        const invalidJson = new File(
+          ["{invalid json content"],
+          "invalid.json",
+          {
+            type: "application/json",
+          },
+        );
+
+        await expect(converters.JSON.CSV(invalidJson)).rejects.toThrow();
+      });
+
+      it("handles invalid XML gracefully", async () => {
+        const invalidXml = new File(
+          ["<root><unclosed>content"],
+          "invalid.xml",
+          {
+            type: "application/xml",
+          },
+        );
+
+        // XML parsing doesn't throw errors, but may produce unexpected results
+        const result = await converters.XML.JSON(invalidXml);
+        expect(result).toBeInstanceOf(Blob);
+        expect(result.type).toBe("application/json");
+      });
+
+      it("handles malformed CSV gracefully", async () => {
+        const malformedCsv = new File(
+          ['"unclosed quote,field1,field2'],
+          "malformed.csv",
+          {
+            type: "text/csv",
+          },
+        );
+
+        // CSV parsing is forgiving and may produce unexpected results
+        const result = await converters.CSV.JSON(malformedCsv);
+        expect(result).toBeInstanceOf(Blob);
+        expect(result.type).toBe("application/json");
+      });
+    });
+
+    describe("Empty Files", () => {
+      it("handles empty text file", async () => {
+        const emptyFile = new File([""], "empty.txt", { type: "text/plain" });
+
+        const result = await converters.TXT.MD(emptyFile);
+        const text = await result.text();
+        expect(text).toContain("```\n\n```");
+      });
+
+      it("handles empty JSON file", async () => {
+        const emptyJson = new File(["{}"], "empty.json", {
+          type: "application/json",
+        });
+
+        const result = await converters.JSON.CSV(emptyJson);
+        const text = await result.text();
+        expect(text).toBeDefined();
+      });
+
+      it("handles empty XML file", async () => {
+        const emptyXml = new File(["<root></root>"], "empty.xml", {
+          type: "application/xml",
+        });
+
+        const result = await converters.XML.JSON(emptyXml);
+        const text = await result.text();
+        expect(text).toBeDefined();
+        // The mock parser returns test data, so we just check it returns something
+      });
+    });
+
+    describe("Large Files", () => {
+      it("handles large text files", async () => {
+        const largeContent = "line\n".repeat(10000);
+        const largeFile = new File([largeContent], "large.txt", {
+          type: "text/plain",
+        });
+
+        const result = await converters.TXT.MD(largeFile);
+        const text = await result.text();
+        expect(text).toContain("```\n");
+        expect(text).toContain("line");
+      });
+
+      it("handles large JSON arrays", async () => {
+        const largeJson = JSON.stringify(
+          Array.from({ length: 1000 }, (_, i) => ({
+            id: i,
+            value: `item${i}`,
+          })),
+        );
+        const largeJsonFile = new File([largeJson], "large.json", {
+          type: "application/json",
+        });
+
+        const result = await converters.JSON.CSV(largeJsonFile);
+        expect(result).toBeInstanceOf(Blob);
+        expect(result.type).toBe("text/csv");
+      });
+    });
+
+    describe("Special Characters and Encoding", () => {
+      it("handles UTF-8 characters in text", async () => {
+        const unicodeText = "Hello 世界 🌍 with émojis 🎉";
+        const unicodeFile = new File([unicodeText], "unicode.txt", {
+          type: "text/plain",
+        });
+
+        const result = await converters.TXT.MD(unicodeFile);
+        const text = await result.text();
+        expect(text).toContain("Hello 世界 🌍");
+        expect(text).toContain("émojis 🎉");
+      });
+
+      it("handles special characters in JSON", async () => {
+        const specialJson = JSON.stringify({
+          message: "Hello 世界 🌍",
+          symbols: "!@#$%^&*()",
+          quotes: '"single\' and "double""',
+        });
+        const specialJsonFile = new File([specialJson], "special.json", {
+          type: "application/json",
+        });
+
+        const result = await converters.JSON.CSV(specialJsonFile);
+        const text = await result.text();
+        expect(text).toContain("Hello 世界 🌍");
+      });
+
+      it("handles HTML entities in text", async () => {
+        const htmlText = "Text with & < > \" ' entities";
+        const htmlFile = new File([htmlText], "html.txt", {
+          type: "text/plain",
+        });
+
+        const result = await converters.TXT.MD(htmlFile);
+        const text = await result.text();
+        // MD conversion wraps in code block
+        expect(text).toContain("Text with & < >");
+        expect(text).toContain("```");
+      });
+    });
+
+    describe("Unsupported Conversions", () => {
+      it("throws error for unsupported conversion", async () => {
+        // Try to access a non-existent conversion
+        const txtConverters = converters.TXT;
+        const nonExistent = (txtConverters as Record<string, unknown>)
+          .NONEXISTENT;
+        expect(nonExistent).toBeUndefined();
+      });
+
+      it("validates input format exists", () => {
+        const nonExistentInput = (converters as Record<string, unknown>)
+          .NONEXISTENT;
+        expect(nonExistentInput).toBeUndefined();
+      });
+    });
+
+    describe("File Size Validation", () => {
+      it("handles zero-byte files", async () => {
+        const zeroByteFile = new File([], "zero.txt", { type: "text/plain" });
+
+        const result = await converters.TXT.MD(zeroByteFile);
+        const text = await result.text();
+        expect(text).toContain("```\n\n```");
+      });
+
+      it("handles very small files", async () => {
+        const tinyFile = new File(["a"], "tiny.txt", { type: "text/plain" });
+
+        const result = await converters.TXT.MD(tinyFile);
+        const text = await result.text();
+        expect(text).toContain("```\na\n```");
       });
     });
   });

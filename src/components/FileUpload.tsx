@@ -1,8 +1,9 @@
 import { CloudArrowUpIcon } from "@heroicons/react/24/outline";
-import React, { useRef, useState } from "react";
+import React, { forwardRef, useRef, useState } from "react";
 
 interface FileUploadProps {
   onFileChange: (file: File) => void;
+  onError?: (error: string) => void;
 }
 
 const ACCEPTED_TYPES = [
@@ -22,16 +23,87 @@ const ACCEPTED_TYPES = [
   "text/markdown",
 ];
 
+const ACCEPTED_EXTENSIONS = [
+  ".txt",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".json",
+  ".csv",
+  ".xml",
+  ".html",
+  ".bmp",
+  ".ico",
+  ".gif",
+  ".tsv",
+  ".md",
+];
+
 const isFileSupported = (file: File): boolean => {
-  return (
-    ACCEPTED_TYPES.includes(file.type) ||
-    ACCEPTED_TYPES.some((type) =>
-      file.name.toLowerCase().endsWith(type.split("/")[1]),
-    )
-  );
+  const extension = file.name
+    .toLowerCase()
+    .substring(file.name.lastIndexOf("."));
+  const hasValidExtension = ACCEPTED_EXTENSIONS.includes(extension);
+  const hasValidMimeType = ACCEPTED_TYPES.includes(file.type);
+
+  // Accept if either extension or MIME type is valid (but both are checked for better validation)
+  return hasValidExtension || hasValidMimeType;
 };
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
+const validateFileContent = async (file: File): Promise<boolean> => {
+  const extension = file.name
+    .toLowerCase()
+    .substring(file.name.lastIndexOf("."));
+
+  try {
+    // Read first few bytes to validate content
+    const slice = file.slice(0, 100);
+    const text = await slice.text();
+
+    switch (extension) {
+      case ".json": {
+        // JSON should start with { or [
+        const trimmed = text.trim();
+        return trimmed.startsWith("{") || trimmed.startsWith("[");
+      }
+
+      case ".xml":
+        // XML should start with <
+        return text.trim().startsWith("<");
+
+      case ".html":
+        // HTML should contain <html or <!DOCTYPE
+        return (
+          text.toLowerCase().includes("<html") ||
+          text.toLowerCase().includes("<!doctype")
+        );
+
+      case ".csv":
+      case ".tsv":
+        // CSV/TSV should contain commas or tabs
+        return text.includes(",") || text.includes("\t");
+
+      case ".md":
+        // Markdown often starts with # or has markdown-like content
+        return text.includes("#") || text.length > 0;
+
+      case ".txt":
+        // TXT files are always valid as long as they have content
+        return text.length > 0;
+
+      default:
+        // For images and other binary files, rely on extension/mime type
+        return true;
+    }
+  } catch {
+    // If we can't read the file, reject it
+    return false;
+  }
+};
+
+const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>((props, ref) => {
+  const { onFileChange, onError } = props;
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,16 +117,25 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const file = files[0];
       if (isFileSupported(file)) {
-        onFileChange(file);
+        const isValidContent = await validateFileContent(file);
+        if (isValidContent) {
+          onFileChange(file);
+        } else {
+          onError?.(
+            "File content doesn't match the expected format. Please check your file.",
+          );
+        }
       } else {
-        alert("Unsupported file type. Please upload a supported file format.");
+        onError?.(
+          "Unsupported file type. Please upload a supported file format.",
+        );
       }
     }
   };
@@ -63,19 +144,29 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
     fileInputRef.current?.click();
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       if (isFileSupported(file)) {
-        onFileChange(file);
+        const isValidContent = await validateFileContent(file);
+        if (isValidContent) {
+          onFileChange(file);
+        } else {
+          onError?.(
+            "File content doesn't match the expected format. Please check your file.",
+          );
+        }
       } else {
-        alert("Unsupported file type. Please upload a supported file format.");
+        onError?.(
+          "Unsupported file type. Please upload a supported file format.",
+        );
       }
     }
   };
 
   return (
     <div
+      ref={ref}
       className={`relative flex flex-col items-center justify-center w-full min-h-75 border-4 border-dashed rounded-3xl transition-all cursor-pointer group
         ${
           isDragging
@@ -87,6 +178,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      aria-label="Upload file by dragging and dropping or clicking to browse"
+      aria-describedby="file-upload-description"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
     >
       <input
         type="file"
@@ -94,19 +195,23 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
         className="hidden"
         accept={ACCEPTED_TYPES.join(",")}
         onChange={handleFileSelect}
+        aria-hidden="true"
       />
 
       <div className="flex flex-col items-center gap-4 p-8 text-center group-hover:scale-110 transition-transform duration-300 pointer-events-none">
         <div
           className={`p-6 rounded-full ${isDragging ? "bg-primary text-primary-content" : "bg-base-300 text-base-content"}`}
         >
-          <CloudArrowUpIcon className="w-12 h-12" />
+          <CloudArrowUpIcon className="w-12 h-12" aria-hidden="true" />
         </div>
-        <div className="space-y-2">
-          <h3 className="font-bold text-2xl">
+        <div className="space-y-3">
+          <h3 className="font-bold text-2xl leading-tight">
             {isDragging ? "Drop it here!" : "Upload your file"}
           </h3>
-          <p className="mx-auto max-w-xs text-base-content/60">
+          <p
+            id="file-upload-description"
+            className="mx-auto max-w-xs text-base text-base-content/60 leading-relaxed"
+          >
             Drag and drop your file here, or click to browse files. Supports
             TXT, JSON, CSV, XML, HTML, MD, TSV, JPG, PNG, WEBP, BMP, ICO, GIF.
           </p>
@@ -114,6 +219,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileChange }) => {
       </div>
     </div>
   );
-};
+});
 
 export default FileUpload;

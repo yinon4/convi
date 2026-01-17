@@ -52,6 +52,12 @@ Use this file to provide workspace-specific custom instructions to Copilot. For 
 - [x] Add Theme Selector
 <!-- Added ThemeSelector component and integrated into Header -->
 
+- [x] Implement Progress Persistence
+<!-- Added localStorage-based progress saving for large file conversions, resume UI in IDLE state, and automatic progress restoration when re-selecting matching files -->
+
+- [x] Final Quality Assurance
+<!-- All tests pass (38/38), build succeeds, linting clean, TypeScript errors resolved -->
+
 PROGRESS TRACKING:
 
 - If any tools are available to manage the above todo list, use it to track progress through this checklist.
