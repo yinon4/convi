@@ -14,20 +14,23 @@ let ffmpeg: FFmpeg | null = null;
 
 const getFFmpeg = async (): Promise<FFmpeg> => {
   if (ffmpeg) return ffmpeg;
-  
+
   ffmpeg = new FFmpeg();
-  
+
   try {
     const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
     await ffmpeg.load({
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+      wasmURL: await toBlobURL(
+        `${baseURL}/ffmpeg-core.wasm`,
+        "application/wasm",
+      ),
     });
   } catch (error) {
     console.error("Failed to load FFmpeg:", error);
     throw new Error("FFmpeg initialization failed");
   }
-  
+
   return ffmpeg;
 };
 
@@ -120,10 +123,13 @@ const csvToJson = async (file: File): Promise<Blob> => {
     .map((h) => h.trim().replace(/^"|"$/g, ""));
   const data = lines.slice(1).map((line) => {
     const values = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
-    return headers.reduce((obj, header, i) => {
-      obj[header] = values[i];
-      return obj;
-    }, {} as Record<string, string>);
+    return headers.reduce(
+      (obj, header, i) => {
+        obj[header] = values[i];
+        return obj;
+      },
+      {} as Record<string, string>,
+    );
   });
   return new Blob([JSON.stringify(data, null, 2)], {
     type: "application/json",
@@ -184,7 +190,9 @@ const xmlToJson = async (file: File): Promise<Blob> => {
         for (let i = 0; i < element.attributes.length; i++) {
           const attribute = element.attributes.item(i);
           if (attribute) {
-            (obj["@attributes"] as Record<string, unknown>)[attribute.nodeName] = attribute.nodeValue;
+            (obj["@attributes"] as Record<string, unknown>)[
+              attribute.nodeName
+            ] = attribute.nodeValue;
           }
         }
       }
@@ -194,12 +202,14 @@ const xmlToJson = async (file: File): Promise<Blob> => {
 
     if (node.hasChildNodes()) {
       for (let i = 0; i < node.childNodes.length; i++) {
-        const item = node.childNodes.item ? node.childNodes.item(i) : node.childNodes[i];
+        const item = node.childNodes.item
+          ? node.childNodes.item(i)
+          : node.childNodes[i];
         if (item) {
           const nodeName = item.nodeName;
           const existing = obj[nodeName];
           const newValue = xml2json(item);
-          
+
           if (typeof newValue === "string") {
             if (existing === undefined) {
               obj[nodeName] = newValue;
@@ -294,7 +304,10 @@ const pdfToHtml = async (file: File): Promise<Blob> => {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
     const text = textContent.items
-      .filter((item: unknown) => typeof item === "object" && item !== null && "str" in item)
+      .filter(
+        (item: unknown) =>
+          typeof item === "object" && item !== null && "str" in item,
+      )
       .map((item: unknown) => (item as { str: string }).str)
       .join(" ");
     html += `<p>${text}</p>`;
@@ -312,7 +325,10 @@ const pdfToTxt = async (file: File): Promise<Blob> => {
     const textContent = await page.getTextContent();
     text +=
       textContent.items
-        .filter((item: unknown) => typeof item === "object" && item !== null && "str" in item)
+        .filter(
+          (item: unknown) =>
+            typeof item === "object" && item !== null && "str" in item,
+        )
         .map((item: unknown) => (item as { str: string }).str)
         .join(" ") + "\n";
   }
@@ -380,66 +396,84 @@ const convertImage = async (file: File, targetType: string): Promise<Blob> => {
   });
 };
 
-const convertVideo = async (file: File, outputFormat: string): Promise<Blob> => {
+const convertVideo = async (
+  file: File,
+  outputFormat: string,
+): Promise<Blob> => {
   const ffmpeg = await getFFmpeg();
-  
-  const inputFileName = `input.${file.name.split('.').pop()}`;
+
+  const inputFileName = `input.${file.name.split(".").pop()}`;
   const outputFileName = `output.${outputFormat.toLowerCase()}`;
-  
+
   try {
     // Write input file to FFmpeg's virtual filesystem
     await ffmpeg.writeFile(inputFileName, await fetchFile(file));
-    
+
     // Run FFmpeg command
     await ffmpeg.exec([
-      '-i', inputFileName,
-      '-c:v', 'libx264', // Use H.264 codec for MP4
-      '-preset', 'fast',
-      '-crf', '22',
-      '-c:a', 'aac',
-      outputFileName
+      "-i",
+      inputFileName,
+      "-c:v",
+      "libx264", // Use H.264 codec for MP4
+      "-preset",
+      "fast",
+      "-crf",
+      "22",
+      "-c:a",
+      "aac",
+      outputFileName,
     ]);
-    
+
     // Read output file
     const data = await ffmpeg.readFile(outputFileName);
-    
+
     // Clean up
     await ffmpeg.deleteFile(inputFileName);
     await ffmpeg.deleteFile(outputFileName);
-    
-    return new Blob([data as BlobPart], { type: `video/${outputFormat.toLowerCase()}` });
+
+    return new Blob([data as BlobPart], {
+      type: `video/${outputFormat.toLowerCase()}`,
+    });
   } catch (error) {
     console.error("Video conversion failed:", error);
     throw new Error(`Failed to convert video to ${outputFormat}`);
   }
 };
 
-const convertAudio = async (file: File, outputFormat: string): Promise<Blob> => {
+const convertAudio = async (
+  file: File,
+  outputFormat: string,
+): Promise<Blob> => {
   const ffmpeg = await getFFmpeg();
-  
-  const inputFileName = `input.${file.name.split('.').pop()}`;
+
+  const inputFileName = `input.${file.name.split(".").pop()}`;
   const outputFileName = `output.${outputFormat.toLowerCase()}`;
-  
+
   try {
     // Write input file to FFmpeg's virtual filesystem
     await ffmpeg.writeFile(inputFileName, await fetchFile(file));
-    
+
     // Run FFmpeg command for audio conversion
     await ffmpeg.exec([
-      '-i', inputFileName,
-      '-c:a', getAudioCodec(outputFormat),
-      '-b:a', '192k', // Set bitrate to 192kbps
-      outputFileName
+      "-i",
+      inputFileName,
+      "-c:a",
+      getAudioCodec(outputFormat),
+      "-b:a",
+      "192k", // Set bitrate to 192kbps
+      outputFileName,
     ]);
-    
+
     // Read output file
     const data = await ffmpeg.readFile(outputFileName);
-    
+
     // Clean up
     await ffmpeg.deleteFile(inputFileName);
     await ffmpeg.deleteFile(outputFileName);
-    
-    return new Blob([data as BlobPart], { type: `audio/${outputFormat.toLowerCase()}` });
+
+    return new Blob([data as BlobPart], {
+      type: `audio/${outputFormat.toLowerCase()}`,
+    });
   } catch (error) {
     console.error("Audio conversion failed:", error);
     throw new Error(`Failed to convert audio to ${outputFormat}`);
@@ -448,15 +482,15 @@ const convertAudio = async (file: File, outputFormat: string): Promise<Blob> => 
 
 const getAudioCodec = (format: string): string => {
   const codecMap: Record<string, string> = {
-    'mp3': 'libmp3lame',
-    'wav': 'pcm_s16le',
-    'flac': 'flac',
-    'aac': 'aac',
-    'ogg': 'libvorbis',
-    'm4a': 'aac',
-    'wma': 'wmav2'
+    mp3: "libmp3lame",
+    wav: "pcm_s16le",
+    flac: "flac",
+    aac: "aac",
+    ogg: "libvorbis",
+    m4a: "aac",
+    wma: "wmav2",
   };
-  return codecMap[format.toLowerCase()] || 'aac';
+  return codecMap[format.toLowerCase()] || "aac";
 };
 
 // Conversion map
@@ -509,7 +543,9 @@ export const converters: Record<
       const json = JSON.parse(jsonText);
       // For XML, the root element contains the array
       const rootKey = Object.keys(json)[0];
-      const array = Array.isArray(json[rootKey]) ? json[rootKey] : [json[rootKey]];
+      const array = Array.isArray(json[rootKey])
+        ? json[rootKey]
+        : [json[rootKey]];
       const csvJson = JSON.stringify(array);
       const csvFile = new File([csvJson], "temp.json", {
         type: "application/json",

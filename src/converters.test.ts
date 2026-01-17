@@ -4,95 +4,200 @@ import { join } from "path";
 
 // Load real test files
 const testFiles = {
-  txt: new File([readFileSync(join(process.cwd(), "test/fixtures/test.txt"))], "test.txt", { type: "text/plain" }),
-  json: new File([readFileSync(join(process.cwd(), "test/fixtures/test.json"))], "test.json", { type: "application/json" }),
-  csv: new File([readFileSync(join(process.cwd(), "test/fixtures/test.csv"))], "test.csv", { type: "text/csv" }),
-  xml: new File([readFileSync(join(process.cwd(), "test/fixtures/test.xml"))], "test.xml", { type: "application/xml" }),
-  html: new File([readFileSync(join(process.cwd(), "test/fixtures/test.html"))], "test.html", { type: "text/html" }),
-  pdf: new File([readFileSync(join(process.cwd(), "test/fixtures/test.pdf"))], "test.pdf", { type: "application/pdf" }),
+  txt: new File(
+    [readFileSync(join(process.cwd(), "test/fixtures/test.txt"))],
+    "test.txt",
+    { type: "text/plain" },
+  ),
+  json: new File(
+    [readFileSync(join(process.cwd(), "test/fixtures/test.json"))],
+    "test.json",
+    { type: "application/json" },
+  ),
+  csv: new File(
+    [readFileSync(join(process.cwd(), "test/fixtures/test.csv"))],
+    "test.csv",
+    { type: "text/csv" },
+  ),
+  xml: new File(
+    [readFileSync(join(process.cwd(), "test/fixtures/test.xml"))],
+    "test.xml",
+    { type: "application/xml" },
+  ),
+  html: new File(
+    [readFileSync(join(process.cwd(), "test/fixtures/test.html"))],
+    "test.html",
+    { type: "text/html" },
+  ),
+  pdf: new File(
+    [readFileSync(join(process.cwd(), "test/fixtures/test.pdf"))],
+    "test.pdf",
+    { type: "application/pdf" },
+  ),
 };
 
 // Mock browser APIs that don't exist in Node.js
 if (typeof window !== "undefined") {
   window.URL.createObjectURL = vi.fn(() => "mock-url");
   window.URL.revokeObjectURL = vi.fn();
-// @ts-ignore - Mock for browser environment
-  ((window as unknown) as { DOMMatrix: typeof DOMMatrix }).DOMMatrix = class DOMMatrix {};
+  // @ts-ignore - Mock for browser environment
+  (window as unknown as { DOMMatrix: typeof DOMMatrix }).DOMMatrix =
+    class DOMMatrix {};
 }
 
 // @ts-ignore - Mock for DOMParser
-(globalThis as unknown as { DOMParser: new () => DOMParser }).DOMParser = vi.fn().mockImplementation(function() {
-  return {
-    parseFromString: vi.fn().mockImplementation((xmlString: string) => {
-      // Mock XML parsing for test files
-      if (xmlString.includes("<root>")) {
-        const childNodes = [
-          {
-            nodeType: 1,
-            nodeName: "person",
-            attributes: { length: 0 },
-            childNodes: [
-              { nodeType: 1, nodeName: "name", attributes: { length: 0 }, childNodes: [{ nodeType: 3, nodeName: "#text", nodeValue: "John" }], hasChildNodes: vi.fn().mockReturnValue(true) },
-              { nodeType: 1, nodeName: "age", attributes: { length: 0 }, childNodes: [{ nodeType: 3, nodeName: "#text", nodeValue: "30" }], hasChildNodes: vi.fn().mockReturnValue(true) },
-              { nodeType: 1, nodeName: "city", attributes: { length: 0 }, childNodes: [{ nodeType: 3, nodeName: "#text", nodeValue: "New York" }], hasChildNodes: vi.fn().mockReturnValue(true) }
-            ],
-            hasChildNodes: vi.fn().mockReturnValue(true),
-          },
-          {
-            nodeType: 1,
-            nodeName: "person",
-            attributes: { length: 0 },
-            childNodes: [
-              { nodeType: 1, nodeName: "name", attributes: { length: 0 }, childNodes: [{ nodeType: 3, nodeName: "#text", nodeValue: "Jane" }], hasChildNodes: vi.fn().mockReturnValue(true) },
-              { nodeType: 1, nodeName: "age", attributes: { length: 0 }, childNodes: [{ nodeType: 3, nodeName: "#text", nodeValue: "25" }], hasChildNodes: vi.fn().mockReturnValue(true) },
-              { nodeType: 1, nodeName: "city", attributes: { length: 0 }, childNodes: [{ nodeType: 3, nodeName: "#text", nodeValue: "London" }], hasChildNodes: vi.fn().mockReturnValue(true) }
-            ],
-            hasChildNodes: vi.fn().mockReturnValue(true),
-          }
-        ];
-        // @ts-ignore - Mock childNodes
-        childNodes.item = vi.fn().mockImplementation((index: number) => childNodes[index]);
-        childNodes.length = 2;
+(globalThis as unknown as { DOMParser: new () => DOMParser }).DOMParser = vi
+  .fn()
+  .mockImplementation(function () {
+    return {
+      parseFromString: vi.fn().mockImplementation((xmlString: string) => {
+        // Mock XML parsing for test files
+        if (xmlString.includes("<root>")) {
+          const childNodes = [
+            {
+              nodeType: 1,
+              nodeName: "person",
+              attributes: { length: 0 },
+              childNodes: [
+                {
+                  nodeType: 1,
+                  nodeName: "name",
+                  attributes: { length: 0 },
+                  childNodes: [
+                    { nodeType: 3, nodeName: "#text", nodeValue: "John" },
+                  ],
+                  hasChildNodes: vi.fn().mockReturnValue(true),
+                },
+                {
+                  nodeType: 1,
+                  nodeName: "age",
+                  attributes: { length: 0 },
+                  childNodes: [
+                    { nodeType: 3, nodeName: "#text", nodeValue: "30" },
+                  ],
+                  hasChildNodes: vi.fn().mockReturnValue(true),
+                },
+                {
+                  nodeType: 1,
+                  nodeName: "city",
+                  attributes: { length: 0 },
+                  childNodes: [
+                    { nodeType: 3, nodeName: "#text", nodeValue: "New York" },
+                  ],
+                  hasChildNodes: vi.fn().mockReturnValue(true),
+                },
+              ],
+              hasChildNodes: vi.fn().mockReturnValue(true),
+            },
+            {
+              nodeType: 1,
+              nodeName: "person",
+              attributes: { length: 0 },
+              childNodes: [
+                {
+                  nodeType: 1,
+                  nodeName: "name",
+                  attributes: { length: 0 },
+                  childNodes: [
+                    { nodeType: 3, nodeName: "#text", nodeValue: "Jane" },
+                  ],
+                  hasChildNodes: vi.fn().mockReturnValue(true),
+                },
+                {
+                  nodeType: 1,
+                  nodeName: "age",
+                  attributes: { length: 0 },
+                  childNodes: [
+                    { nodeType: 3, nodeName: "#text", nodeValue: "25" },
+                  ],
+                  hasChildNodes: vi.fn().mockReturnValue(true),
+                },
+                {
+                  nodeType: 1,
+                  nodeName: "city",
+                  attributes: { length: 0 },
+                  childNodes: [
+                    { nodeType: 3, nodeName: "#text", nodeValue: "London" },
+                  ],
+                  hasChildNodes: vi.fn().mockReturnValue(true),
+                },
+              ],
+              hasChildNodes: vi.fn().mockReturnValue(true),
+            },
+          ];
+          // @ts-ignore - Mock childNodes
+          childNodes.item = vi
+            .fn()
+            .mockImplementation((index: number) => childNodes[index]);
+          childNodes.length = 2;
 
-        // @ts-ignore - Mock childNodes
-        childNodes[0].childNodes[0].childNodes.item = vi.fn().mockImplementation((index: number) => childNodes[0].childNodes[0].childNodes[index]);
-        childNodes[0].childNodes[0].childNodes.length = 1;
-        // @ts-ignore - Mock childNodes
-        childNodes[0].childNodes[1].childNodes.item = vi.fn().mockImplementation((index: number) => childNodes[0].childNodes[1].childNodes[index]);
-        childNodes[0].childNodes[1].childNodes.length = 1;
-        // @ts-ignore - Mock childNodes
-        childNodes[0].childNodes[2].childNodes.item = vi.fn().mockImplementation((index: number) => childNodes[0].childNodes[2].childNodes[index]);
-        childNodes[0].childNodes[2].childNodes.length = 1;
-        
-        // @ts-ignore - Mock childNodes
-        childNodes[1].childNodes.item = vi.fn().mockImplementation((index: number) => childNodes[1].childNodes[index]);
-        childNodes[1].childNodes.length = 3;
-        // @ts-ignore - Mock childNodes
-        childNodes[1].childNodes[0].childNodes.item = vi.fn().mockImplementation((index: number) => childNodes[1].childNodes[0].childNodes[index]);
-        childNodes[1].childNodes[0].childNodes.length = 1;
-        // @ts-ignore - Mock childNodes
-        childNodes[1].childNodes[1].childNodes.item = vi.fn().mockImplementation((index: number) => childNodes[1].childNodes[1].childNodes[index]);
-        childNodes[1].childNodes[1].childNodes.length = 1;
-        // @ts-ignore - Mock childNodes
-        childNodes[1].childNodes[2].childNodes.item = vi.fn().mockImplementation((index: number) => childNodes[1].childNodes[2].childNodes[index]);
-        childNodes[1].childNodes[2].childNodes.length = 1;
+          // @ts-ignore - Mock childNodes
+          childNodes[0].childNodes[0].childNodes.item = vi
+            .fn()
+            .mockImplementation(
+              (index: number) => childNodes[0].childNodes[0].childNodes[index],
+            );
+          childNodes[0].childNodes[0].childNodes.length = 1;
+          // @ts-ignore - Mock childNodes
+          childNodes[0].childNodes[1].childNodes.item = vi
+            .fn()
+            .mockImplementation(
+              (index: number) => childNodes[0].childNodes[1].childNodes[index],
+            );
+          childNodes[0].childNodes[1].childNodes.length = 1;
+          // @ts-ignore - Mock childNodes
+          childNodes[0].childNodes[2].childNodes.item = vi
+            .fn()
+            .mockImplementation(
+              (index: number) => childNodes[0].childNodes[2].childNodes[index],
+            );
+          childNodes[0].childNodes[2].childNodes.length = 1;
 
+          // @ts-ignore - Mock childNodes
+          childNodes[1].childNodes.item = vi
+            .fn()
+            .mockImplementation(
+              (index: number) => childNodes[1].childNodes[index],
+            );
+          childNodes[1].childNodes.length = 3;
+          // @ts-ignore - Mock childNodes
+          childNodes[1].childNodes[0].childNodes.item = vi
+            .fn()
+            .mockImplementation(
+              (index: number) => childNodes[1].childNodes[0].childNodes[index],
+            );
+          childNodes[1].childNodes[0].childNodes.length = 1;
+          // @ts-ignore - Mock childNodes
+          childNodes[1].childNodes[1].childNodes.item = vi
+            .fn()
+            .mockImplementation(
+              (index: number) => childNodes[1].childNodes[1].childNodes[index],
+            );
+          childNodes[1].childNodes[1].childNodes.length = 1;
+          // @ts-ignore - Mock childNodes
+          childNodes[1].childNodes[2].childNodes.item = vi
+            .fn()
+            .mockImplementation(
+              (index: number) => childNodes[1].childNodes[2].childNodes[index],
+            );
+          childNodes[1].childNodes[2].childNodes.length = 1;
+
+          return {
+            documentElement: {
+              childNodes,
+              hasChildNodes: vi.fn().mockReturnValue(true),
+            },
+          };
+        }
         return {
           documentElement: {
-            childNodes,
-            hasChildNodes: vi.fn().mockReturnValue(true),
+            childNodes: { item: vi.fn().mockReturnValue(null), length: 0 },
+            hasChildNodes: vi.fn().mockReturnValue(false),
           },
         };
-      }
-      return {
-        documentElement: {
-          childNodes: { item: vi.fn().mockReturnValue(null), length: 0 },
-          hasChildNodes: vi.fn().mockReturnValue(false),
-        },
-      };
-    }),
-  };
-});
+      }),
+    };
+  });
 
 // @ts-ignore - Mock document
 (globalThis as unknown as { document: Document }).document = {
@@ -142,7 +247,11 @@ vi.mock("html2pdf.js", () => {
   const mockHtml2Pdf = vi.fn().mockReturnValue({
     set: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
-    outputPdf: vi.fn().mockResolvedValue(new Blob(["mock-pdf-content"], { type: "application/pdf" })),
+    outputPdf: vi
+      .fn()
+      .mockResolvedValue(
+        new Blob(["mock-pdf-content"], { type: "application/pdf" }),
+      ),
   });
   return { default: mockHtml2Pdf };
 });
@@ -159,7 +268,7 @@ vi.mock("pdfjs-dist", () => {
             items: [
               { str: "Hello World" },
               { str: "This is a test text file." },
-              { str: "It has multiple lines." }
+              { str: "It has multiple lines." },
             ],
           }),
         }),
@@ -170,12 +279,13 @@ vi.mock("pdfjs-dist", () => {
 
 vi.mock("mammoth", () => ({
   convertToHtml: vi.fn().mockResolvedValue({
-    value: "<p>Hello World</p><p>This is a test text file.</p><p>It has multiple lines.</p>"
+    value:
+      "<p>Hello World</p><p>This is a test text file.</p><p>It has multiple lines.</p>",
   }),
 }));
 
 vi.mock("@ffmpeg/ffmpeg", () => ({
-  FFmpeg: vi.fn().mockImplementation(function() {
+  FFmpeg: vi.fn().mockImplementation(function () {
     return {
       load: vi.fn().mockResolvedValue(undefined),
       writeFile: vi.fn().mockResolvedValue(undefined),
@@ -194,7 +304,13 @@ vi.mock("@ffmpeg/util", () => ({
 vi.mock("docx", () => ({
   Document: vi.fn(),
   Packer: {
-    toBlob: vi.fn().mockResolvedValue(new Blob(["mock-docx"], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" })),
+    toBlob: vi
+      .fn()
+      .mockResolvedValue(
+        new Blob(["mock-docx"], {
+          type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        }),
+      ),
   },
   Paragraph: vi.fn(),
   TextRun: vi.fn(),
@@ -358,7 +474,10 @@ describe("Converters", () => {
 
       const firstTextRunCall = vi.mocked(TextRun).mock.calls[0][0];
       expect(typeof firstTextRunCall).toBe("object");
-      expect(firstTextRunCall).toHaveProperty("text", "Hello World This is a test text file. It has multiple lines.");
+      expect(firstTextRunCall).toHaveProperty(
+        "text",
+        "Hello World This is a test text file. It has multiple lines.",
+      );
     });
   });
 
