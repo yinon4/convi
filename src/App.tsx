@@ -102,9 +102,7 @@ function App() {
                   {inputFormat}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold truncate">
-                    {selectedFile.name}
-                  </h3>
+                  <h3 className="font-bold truncate">{selectedFile.name}</h3>
                   <p className="text-xs text-base-content/60">
                     {(selectedFile.size / 1024).toFixed(1)} KB
                   </p>
@@ -171,10 +169,7 @@ function App() {
 
           {/* SUCCESS STATE */}
           {appState === "SUCCESS" && (
-            <ResultArea
-              result={outputFormat}
-              onReset={handleReset}
-            />
+            <ResultArea result={outputFormat} onReset={handleReset} />
           )}
         </div>
       </main>

@@ -10,10 +10,7 @@ interface ResultAreaProps {
   onReset: () => void;
 }
 
-const ResultArea: React.FC<ResultAreaProps> = ({
-  result,
-  onReset,
-}) => {
+const ResultArea: React.FC<ResultAreaProps> = ({ result, onReset }) => {
   return (
     <div className="w-full animate-in duration-500 zoom-in-50">
       <div className="relative bg-success shadow-xl overflow-hidden text-success-content card">
@@ -26,12 +23,9 @@ const ResultArea: React.FC<ResultAreaProps> = ({
             <CheckIcon className="w-12 h-12" strokeWidth={3} />
           </div>
 
-          <h2 className="mb-2 font-bold text-3xl card-title">
-            Success!
-          </h2>
+          <h2 className="mb-2 font-bold text-3xl card-title">Success!</h2>
           <p className="opacity-90 mb-8 max-w-md text-lg">
-            Your file has been
-            successfully converted to{" "}
+            Your file has been successfully converted to{" "}
             <span className="font-bold underline">{result}</span>.
           </p>
 

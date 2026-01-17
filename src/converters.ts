@@ -334,20 +334,26 @@ export const converters: Record<
     JSON: csvToJson,
     XML: async (file) => {
       const jsonBlob = await csvToJson(file);
-      const jsonFile = new File([jsonBlob], "temp.json", { type: "application/json" });
+      const jsonFile = new File([jsonBlob], "temp.json", {
+        type: "application/json",
+      });
       return jsonToXml(jsonFile);
     },
     TXT: async (file) => {
       const jsonBlob = await csvToJson(file);
-      const jsonFile = new File([jsonBlob], "temp.json", { type: "application/json" });
+      const jsonFile = new File([jsonBlob], "temp.json", {
+        type: "application/json",
+      });
       return jsonToTxt(jsonFile);
-    }
+    },
   },
   XML: {
     JSON: xmlToJson,
     CSV: async (file) => {
       const jsonBlob = await xmlToJson(file);
-      const jsonFile = new File([jsonBlob], "temp.json", { type: "application/json" });
+      const jsonFile = new File([jsonBlob], "temp.json", {
+        type: "application/json",
+      });
       return jsonToCsv(jsonFile);
     },
   },
