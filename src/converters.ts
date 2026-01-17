@@ -3,9 +3,33 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import * as mammoth from "mammoth";
 import html2pdf from "html2pdf.js";
 import * as pdfjsLib from "pdfjs-dist";
+import { FFmpeg } from "@ffmpeg/ffmpeg";
+import { fetchFile, toBlobURL } from "@ffmpeg/util";
 
 // Set PDF.js worker using CDN to ensure it works in all environments
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+// Initialize FFmpeg instance
+let ffmpeg: FFmpeg | null = null;
+
+const getFFmpeg = async (): Promise<FFmpeg> => {
+  if (ffmpeg) return ffmpeg;
+  
+  ffmpeg = new FFmpeg();
+  
+  try {
+    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
+    await ffmpeg.load({
+      coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+      wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+    });
+  } catch (error) {
+    console.error("Failed to load FFmpeg:", error);
+    throw new Error("FFmpeg initialization failed");
+  }
+  
+  return ffmpeg;
+};
 
 export type FileType =
   | "PDF"
@@ -19,7 +43,21 @@ export type FileType =
   | "XML"
   | "HTML"
   | "BMP"
-  | "ICO";
+  | "ICO"
+  | "MP4"
+  | "AVI"
+  | "MOV"
+  | "MKV"
+  | "WEBM"
+  | "FLV"
+  | "WMV"
+  | "MP3"
+  | "WAV"
+  | "FLAC"
+  | "AAC"
+  | "OGG"
+  | "M4A"
+  | "WMA";
 
 // Conversion functions
 const txtToPdf = async (file: File): Promise<Blob> => {
@@ -67,8 +105,8 @@ const jsonToCsv = async (file: File): Promise<Blob> => {
       ),
     ].join("\n");
     return new Blob([csv], { type: "text/csv" });
-  } catch (e) {
-    throw new Error("Invalid JSON: " + (e as Error).message);
+  } catch {
+    throw new Error("Invalid JSON: parsing failed");
   }
 };
 
@@ -85,7 +123,7 @@ const csvToJson = async (file: File): Promise<Blob> => {
     return headers.reduce((obj, header, i) => {
       obj[header] = values[i];
       return obj;
-    }, {} as any);
+    }, {} as Record<string, string>);
   });
   return new Blob([JSON.stringify(data, null, 2)], {
     type: "application/json",
@@ -96,13 +134,16 @@ const jsonToXml = async (file: File): Promise<Blob> => {
   const text = await file.text();
   try {
     const json = JSON.parse(text);
-    const toXml = (obj: any, root = "root"): string => {
+    const toXml = (obj: unknown, root = "root"): string => {
       let xml = `<${root}>`;
-      for (const key in obj) {
-        if (typeof obj[key] === "object") {
-          xml += toXml(obj[key], key);
-        } else {
-          xml += `<${key}>${obj[key]}</${key}>`;
+      if (typeof obj === "object" && obj !== null) {
+        for (const key in obj as Record<string, unknown>) {
+          const value = (obj as Record<string, unknown>)[key];
+          if (typeof value === "object") {
+            xml += toXml(value, key);
+          } else {
+            xml += `<${key}>${String(value)}</${key}>`;
+          }
         }
       }
       xml += `</${root}>`;
@@ -114,7 +155,7 @@ const jsonToXml = async (file: File): Promise<Blob> => {
         type: "application/xml",
       },
     );
-  } catch (e) {
+  } catch {
     throw new Error("Invalid JSON");
   }
 };
@@ -124,7 +165,7 @@ const jsonToTxt = async (file: File): Promise<Blob> => {
   try {
     const json = JSON.parse(text);
     return new Blob([JSON.stringify(json, null, 2)], { type: "text/plain" });
-  } catch (e) {
+  } catch {
     return new Blob([text], { type: "text/plain" });
   }
 };
@@ -134,36 +175,57 @@ const xmlToJson = async (file: File): Promise<Blob> => {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(text, "text/xml");
 
-  const xml2json = (node: Node): any => {
-    const obj: any = {};
+  const xml2json = (node: Node): Record<string, unknown> | string => {
+    const obj: Record<string, unknown> = {};
     if (node.nodeType === 1) {
-      if ((node as Element).attributes.length > 0) {
+      const element = node as Element;
+      if (element.attributes.length > 0) {
         obj["@attributes"] = {};
-        for (let i = 0; i < (node as Element).attributes.length; i++) {
-          const attribute = (node as Element).attributes.item(i);
-          if (attribute)
-            obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
+        for (let i = 0; i < element.attributes.length; i++) {
+          const attribute = element.attributes.item(i);
+          if (attribute) {
+            (obj["@attributes"] as Record<string, unknown>)[attribute.nodeName] = attribute.nodeValue;
+          }
         }
       }
     } else if (node.nodeType === 3) {
-      return node.nodeValue;
+      return node.nodeValue || "";
     }
 
     if (node.hasChildNodes()) {
       for (let i = 0; i < node.childNodes.length; i++) {
-        const item = node.childNodes.item(i);
-        const nodeName = item.nodeName;
-        if (typeof obj[nodeName] === "undefined") {
-          obj[nodeName] = xml2json(item);
-        } else {
-          if (typeof obj[nodeName].push === "undefined") {
-            const old = obj[nodeName];
-            obj[nodeName] = [];
-            obj[nodeName].push(old);
+        const item = node.childNodes.item ? node.childNodes.item(i) : node.childNodes[i];
+        if (item) {
+          const nodeName = item.nodeName;
+          const existing = obj[nodeName];
+          const newValue = xml2json(item);
+          
+          if (typeof newValue === "string") {
+            if (existing === undefined) {
+              obj[nodeName] = newValue;
+            } else {
+              if (!Array.isArray(existing)) {
+                obj[nodeName] = [existing];
+              }
+              (obj[nodeName] as unknown[]).push(newValue);
+            }
+          } else {
+            if (existing === undefined) {
+              obj[nodeName] = newValue;
+            } else {
+              if (!Array.isArray(existing)) {
+                obj[nodeName] = [existing];
+              }
+              (obj[nodeName] as unknown[]).push(newValue);
+            }
           }
-          obj[nodeName].push(xml2json(item));
         }
       }
+    }
+    // If the object only has a "#text" property, return the text directly
+    const keys = Object.keys(obj);
+    if (keys.length === 1 && keys[0] === "#text") {
+      return obj["#text"] as string;
     }
     return obj;
   };
@@ -232,8 +294,8 @@ const pdfToHtml = async (file: File): Promise<Blob> => {
     const page = await pdf.getPage(i);
     const textContent = await page.getTextContent();
     const text = textContent.items
-      .filter((item: any) => "str" in item)
-      .map((item: any) => item.str)
+      .filter((item: unknown) => typeof item === "object" && item !== null && "str" in item)
+      .map((item: unknown) => (item as { str: string }).str)
       .join(" ");
     html += `<p>${text}</p>`;
   }
@@ -250,8 +312,8 @@ const pdfToTxt = async (file: File): Promise<Blob> => {
     const textContent = await page.getTextContent();
     text +=
       textContent.items
-        .filter((item: any) => "str" in item)
-        .map((item: any) => item.str)
+        .filter((item: unknown) => typeof item === "object" && item !== null && "str" in item)
+        .map((item: unknown) => (item as { str: string }).str)
         .join(" ") + "\n";
   }
   return new Blob([text], { type: "text/plain" });
@@ -318,6 +380,85 @@ const convertImage = async (file: File, targetType: string): Promise<Blob> => {
   });
 };
 
+const convertVideo = async (file: File, outputFormat: string): Promise<Blob> => {
+  const ffmpeg = await getFFmpeg();
+  
+  const inputFileName = `input.${file.name.split('.').pop()}`;
+  const outputFileName = `output.${outputFormat.toLowerCase()}`;
+  
+  try {
+    // Write input file to FFmpeg's virtual filesystem
+    await ffmpeg.writeFile(inputFileName, await fetchFile(file));
+    
+    // Run FFmpeg command
+    await ffmpeg.exec([
+      '-i', inputFileName,
+      '-c:v', 'libx264', // Use H.264 codec for MP4
+      '-preset', 'fast',
+      '-crf', '22',
+      '-c:a', 'aac',
+      outputFileName
+    ]);
+    
+    // Read output file
+    const data = await ffmpeg.readFile(outputFileName);
+    
+    // Clean up
+    await ffmpeg.deleteFile(inputFileName);
+    await ffmpeg.deleteFile(outputFileName);
+    
+    return new Blob([data as BlobPart], { type: `video/${outputFormat.toLowerCase()}` });
+  } catch (error) {
+    console.error("Video conversion failed:", error);
+    throw new Error(`Failed to convert video to ${outputFormat}`);
+  }
+};
+
+const convertAudio = async (file: File, outputFormat: string): Promise<Blob> => {
+  const ffmpeg = await getFFmpeg();
+  
+  const inputFileName = `input.${file.name.split('.').pop()}`;
+  const outputFileName = `output.${outputFormat.toLowerCase()}`;
+  
+  try {
+    // Write input file to FFmpeg's virtual filesystem
+    await ffmpeg.writeFile(inputFileName, await fetchFile(file));
+    
+    // Run FFmpeg command for audio conversion
+    await ffmpeg.exec([
+      '-i', inputFileName,
+      '-c:a', getAudioCodec(outputFormat),
+      '-b:a', '192k', // Set bitrate to 192kbps
+      outputFileName
+    ]);
+    
+    // Read output file
+    const data = await ffmpeg.readFile(outputFileName);
+    
+    // Clean up
+    await ffmpeg.deleteFile(inputFileName);
+    await ffmpeg.deleteFile(outputFileName);
+    
+    return new Blob([data as BlobPart], { type: `audio/${outputFormat.toLowerCase()}` });
+  } catch (error) {
+    console.error("Audio conversion failed:", error);
+    throw new Error(`Failed to convert audio to ${outputFormat}`);
+  }
+};
+
+const getAudioCodec = (format: string): string => {
+  const codecMap: Record<string, string> = {
+    'mp3': 'libmp3lame',
+    'wav': 'pcm_s16le',
+    'flac': 'flac',
+    'aac': 'aac',
+    'ogg': 'libvorbis',
+    'm4a': 'aac',
+    'wma': 'wmav2'
+  };
+  return codecMap[format.toLowerCase()] || 'aac';
+};
+
 // Conversion map
 export const converters: Record<
   string,
@@ -364,10 +505,16 @@ export const converters: Record<
     JSON: xmlToJson,
     CSV: async (file) => {
       const jsonBlob = await xmlToJson(file);
-      const jsonFile = new File([jsonBlob], "temp.json", {
+      const jsonText = await jsonBlob.text();
+      const json = JSON.parse(jsonText);
+      // For XML, the root element contains the array
+      const rootKey = Object.keys(json)[0];
+      const array = Array.isArray(json[rootKey]) ? json[rootKey] : [json[rootKey]];
+      const csvJson = JSON.stringify(array);
+      const csvFile = new File([csvJson], "temp.json", {
         type: "application/json",
       });
-      return jsonToCsv(jsonFile);
+      return jsonToCsv(csvFile);
     },
   },
   HTML: {
@@ -416,6 +563,118 @@ export const converters: Record<
     WEBP: (file) => convertImage(file, "image/webp"),
     BMP: (file) => convertImage(file, "image/bmp"),
     GIF: (file) => convertImage(file, "image/gif"),
+  },
+  MP4: {
+    AVI: (file) => convertVideo(file, "avi"),
+    MOV: (file) => convertVideo(file, "mov"),
+    MKV: (file) => convertVideo(file, "mkv"),
+    WEBM: (file) => convertVideo(file, "webm"),
+    FLV: (file) => convertVideo(file, "flv"),
+    WMV: (file) => convertVideo(file, "wmv"),
+  },
+  AVI: {
+    MP4: (file) => convertVideo(file, "mp4"),
+    MOV: (file) => convertVideo(file, "mov"),
+    MKV: (file) => convertVideo(file, "mkv"),
+    WEBM: (file) => convertVideo(file, "webm"),
+    FLV: (file) => convertVideo(file, "flv"),
+    WMV: (file) => convertVideo(file, "wmv"),
+  },
+  MOV: {
+    MP4: (file) => convertVideo(file, "mp4"),
+    AVI: (file) => convertVideo(file, "avi"),
+    MKV: (file) => convertVideo(file, "mkv"),
+    WEBM: (file) => convertVideo(file, "webm"),
+    FLV: (file) => convertVideo(file, "flv"),
+    WMV: (file) => convertVideo(file, "wmv"),
+  },
+  MKV: {
+    MP4: (file) => convertVideo(file, "mp4"),
+    AVI: (file) => convertVideo(file, "avi"),
+    MOV: (file) => convertVideo(file, "mov"),
+    WEBM: (file) => convertVideo(file, "webm"),
+    FLV: (file) => convertVideo(file, "flv"),
+    WMV: (file) => convertVideo(file, "wmv"),
+  },
+  WEBM: {
+    MP4: (file) => convertVideo(file, "mp4"),
+    AVI: (file) => convertVideo(file, "avi"),
+    MOV: (file) => convertVideo(file, "mov"),
+    MKV: (file) => convertVideo(file, "mkv"),
+    FLV: (file) => convertVideo(file, "flv"),
+    WMV: (file) => convertVideo(file, "wmv"),
+  },
+  FLV: {
+    MP4: (file) => convertVideo(file, "mp4"),
+    AVI: (file) => convertVideo(file, "avi"),
+    MOV: (file) => convertVideo(file, "mov"),
+    MKV: (file) => convertVideo(file, "mkv"),
+    WEBM: (file) => convertVideo(file, "webm"),
+    WMV: (file) => convertVideo(file, "wmv"),
+  },
+  WMV: {
+    MP4: (file) => convertVideo(file, "mp4"),
+    AVI: (file) => convertVideo(file, "avi"),
+    MOV: (file) => convertVideo(file, "mov"),
+    MKV: (file) => convertVideo(file, "mkv"),
+    WEBM: (file) => convertVideo(file, "webm"),
+    FLV: (file) => convertVideo(file, "flv"),
+  },
+  MP3: {
+    WAV: (file) => convertAudio(file, "wav"),
+    FLAC: (file) => convertAudio(file, "flac"),
+    AAC: (file) => convertAudio(file, "aac"),
+    OGG: (file) => convertAudio(file, "ogg"),
+    M4A: (file) => convertAudio(file, "m4a"),
+    WMA: (file) => convertAudio(file, "wma"),
+  },
+  WAV: {
+    MP3: (file) => convertAudio(file, "mp3"),
+    FLAC: (file) => convertAudio(file, "flac"),
+    AAC: (file) => convertAudio(file, "aac"),
+    OGG: (file) => convertAudio(file, "ogg"),
+    M4A: (file) => convertAudio(file, "m4a"),
+    WMA: (file) => convertAudio(file, "wma"),
+  },
+  FLAC: {
+    MP3: (file) => convertAudio(file, "mp3"),
+    WAV: (file) => convertAudio(file, "wav"),
+    AAC: (file) => convertAudio(file, "aac"),
+    OGG: (file) => convertAudio(file, "ogg"),
+    M4A: (file) => convertAudio(file, "m4a"),
+    WMA: (file) => convertAudio(file, "wma"),
+  },
+  AAC: {
+    MP3: (file) => convertAudio(file, "mp3"),
+    WAV: (file) => convertAudio(file, "wav"),
+    FLAC: (file) => convertAudio(file, "flac"),
+    OGG: (file) => convertAudio(file, "ogg"),
+    M4A: (file) => convertAudio(file, "m4a"),
+    WMA: (file) => convertAudio(file, "wma"),
+  },
+  OGG: {
+    MP3: (file) => convertAudio(file, "mp3"),
+    WAV: (file) => convertAudio(file, "wav"),
+    FLAC: (file) => convertAudio(file, "flac"),
+    AAC: (file) => convertAudio(file, "aac"),
+    M4A: (file) => convertAudio(file, "m4a"),
+    WMA: (file) => convertAudio(file, "wma"),
+  },
+  M4A: {
+    MP3: (file) => convertAudio(file, "mp3"),
+    WAV: (file) => convertAudio(file, "wav"),
+    FLAC: (file) => convertAudio(file, "flac"),
+    AAC: (file) => convertAudio(file, "aac"),
+    OGG: (file) => convertAudio(file, "ogg"),
+    WMA: (file) => convertAudio(file, "wma"),
+  },
+  WMA: {
+    MP3: (file) => convertAudio(file, "mp3"),
+    WAV: (file) => convertAudio(file, "wav"),
+    FLAC: (file) => convertAudio(file, "flac"),
+    AAC: (file) => convertAudio(file, "aac"),
+    OGG: (file) => convertAudio(file, "ogg"),
+    M4A: (file) => convertAudio(file, "m4a"),
   },
 };
 

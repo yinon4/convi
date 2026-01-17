@@ -27,6 +27,16 @@ const NetworkModal: React.FC<NetworkModalProps> = ({ isOpen, onClose }) => {
       formats: ["JPG", "PNG", "WEBP", "BMP", "GIF", "ICO"],
       description: "Convert between various image types.",
     },
+    {
+      name: "Videos",
+      formats: ["MP4", "AVI", "MOV", "MKV", "WEBM", "FLV", "WMV"],
+      description: "Convert between popular video formats.",
+    },
+    {
+      name: "Audio",
+      formats: ["MP3", "WAV", "FLAC", "AAC", "OGG", "M4A", "WMA"],
+      description: "Convert between popular audio formats.",
+    },
   ];
 
   const modalContent = (
