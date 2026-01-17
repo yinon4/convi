@@ -4,6 +4,7 @@ import { normalizeFormat } from "./types";
 // Lazy-loaded converter modules
 let textConverters: ConverterMap | null = null;
 let imageConverters: ImageConverterMap | null = null;
+let excelConverters: any = null;
 
 // Lazy load text converters
 const loadTextConverters = async () => {
@@ -21,6 +22,15 @@ const loadImageConverters = async () => {
     imageConverters = module.imageConverters;
   }
   return imageConverters;
+};
+
+// Lazy load excel converters
+const loadExcelConverters = async () => {
+  if (!excelConverters) {
+    const module = await import("./excelConverters");
+    excelConverters = module.excelConverters;
+  }
+  return excelConverters;
 };
 
 // Reconstruct the converters object to maintain API compatibility
@@ -56,6 +66,10 @@ export const converters: Record<
       const converters = await loadTextConverters();
       return converters.jsonToXml(file);
     },
+    XLSX: async (file) => {
+      const converters = await loadExcelConverters();
+      return converters.jsonToExcel(file);
+    },
   },
   CSV: {
     JSON: async (file) => {
@@ -73,6 +87,10 @@ export const converters: Record<
         type: "application/json",
       });
       return converters.jsonToXml(jsonFile);
+    },
+    XLSX: async (file) => {
+      const converters = await loadExcelConverters();
+      return converters.csvToExcel(file);
     },
   },
   XML: {
@@ -299,6 +317,26 @@ export const converters: Record<
     ICO: async (file, onProgress) => {
       const converters = await loadImageConverters();
       return converters.convertImage(file, "image/x-icon", onProgress);
+    },
+  },
+  XLS: {
+    CSV: async (file) => {
+      const converters = await loadExcelConverters();
+      return converters.excelToCsv(file);
+    },
+    JSON: async (file) => {
+      const converters = await loadExcelConverters();
+      return converters.excelToJson(file);
+    },
+  },
+  XLSX: {
+    CSV: async (file) => {
+      const converters = await loadExcelConverters();
+      return converters.excelToCsv(file);
+    },
+    JSON: async (file) => {
+      const converters = await loadExcelConverters();
+      return converters.excelToJson(file);
     },
   },
 };

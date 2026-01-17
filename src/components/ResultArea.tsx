@@ -57,7 +57,7 @@ const ResultArea = forwardRef<HTMLDivElement, ResultAreaProps>((props, ref) => {
         currentUrlRef.current = url;
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setPreviewContent(url);
-         
+
         setPreviewType("image");
       } else {
         setPreviewType("none");

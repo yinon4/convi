@@ -21,6 +21,8 @@ const ACCEPTED_TYPES = [
   "image/gif",
   "text/tab-separated-values",
   "text/markdown",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 
 const ACCEPTED_EXTENSIONS = [
@@ -38,6 +40,8 @@ const ACCEPTED_EXTENSIONS = [
   ".gif",
   ".tsv",
   ".md",
+  ".xls",
+  ".xlsx",
 ];
 
 const isFileSupported = (file: File): boolean => {
@@ -87,6 +91,11 @@ const validateFileContent = async (file: File): Promise<boolean> => {
       case ".md":
         // Markdown often starts with # or has markdown-like content
         return text.includes("#") || text.length > 0;
+
+      case ".xls":
+      case ".xlsx":
+        // Excel files are binary, rely on extension/mime type
+        return true;
 
       case ".txt":
         // TXT files are always valid as long as they have content
@@ -193,7 +202,7 @@ const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>((props, ref) => {
         type="file"
         ref={fileInputRef}
         className="hidden"
-        accept={ACCEPTED_TYPES.join(",")}
+        accept={`${ACCEPTED_TYPES.join(",")},${ACCEPTED_EXTENSIONS.join(",")}`}
         onChange={handleFileSelect}
         aria-hidden="true"
       />
@@ -212,8 +221,7 @@ const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>((props, ref) => {
             id="file-upload-description"
             className="mx-auto max-w-xs text-base text-base-content/60 leading-relaxed"
           >
-            Drag and drop your file here, or click to browse files. Supports
-            TXT, JSON, CSV, XML, HTML, MD, TSV, JPG, PNG, WEBP, BMP, ICO, GIF.
+            Drag and drop your file here, or click to browse files.
           </p>
         </div>
       </div>

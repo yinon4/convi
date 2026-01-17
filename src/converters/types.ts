@@ -11,11 +11,20 @@ export type FileType =
   | "ICO"
   | "GIF"
   | "TSV"
-  | "MD";
+  | "MD"
+  | "XLS"
+  | "XLSX";
 
-export type ConverterFunction = (file: File, progressCallback?: (progress: number) => void) => Promise<Blob>;
+export type ConverterFunction = (
+  file: File,
+  progressCallback?: (progress: number) => void,
+) => Promise<Blob>;
 
-export type ImageConverterFunction = (file: File, targetType: string, onProgress?: (progress: number) => void) => Promise<Blob>;
+export type ImageConverterFunction = (
+  file: File,
+  targetType: string,
+  onProgress?: (progress: number) => void,
+) => Promise<Blob>;
 
 export type ConverterMap = Record<string, ConverterFunction>;
 

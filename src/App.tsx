@@ -1,5 +1,6 @@
 import { ArrowRightIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef, useState } from "react";
+import FilePreview from "./components/FilePreview";
 import FileUpload from "./components/FileUpload";
 import FormatSelector from "./components/FormatSelector";
 import Header from "./components/Header";
@@ -249,6 +250,8 @@ function App() {
               </div>
 
               <div className="space-y-6 bg-base-100 shadow-xl p-6 md:p-8 rounded-3xl">
+                <FilePreview file={selectedFile} />
+
                 <div>
                   <h3 className="mb-4 font-bold text-xl leading-tight">
                     Select Output Format
@@ -363,7 +366,7 @@ function App() {
                   )}
                   <button
                     className={`gap-3 w-full hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 btn btn-outline btn-lg ${
-                      errorInfo?.canRetry ? 'btn-ghost' : 'btn-primary'
+                      errorInfo?.canRetry ? "btn-ghost" : "btn-primary"
                     }`}
                     onClick={() => {
                       setError("");
@@ -376,7 +379,9 @@ function App() {
                     aria-label="Choose a different file or format"
                   >
                     <span className="font-medium text-lg">
-                      {errorInfo?.canRetry ? 'Try Different File' : 'Choose Different File'}
+                      {errorInfo?.canRetry
+                        ? "Try Different File"
+                        : "Choose Different File"}
                     </span>
                   </button>
                 </div>
